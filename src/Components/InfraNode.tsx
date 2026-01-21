@@ -1,48 +1,53 @@
-// On ajoute le mot-clé 'type' devant l'import
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Server, Shield, Router, HardDrive, Monitor, Network } from "lucide-react";
+import { Server, Shield, Router, Monitor, Network } from "lucide-react";
 
-
+// Configuration stricte des 5 rôles demandés
 const ROLE_CONFIG: any = {
-  FIREWALL: { color: "#ef4444", icon: Shield, label: "Security Gateway" },
-  ROUTER: { color: "#22c55e", icon: Router, label: "Router" },
-  SWITCH: { color: "#eab308", icon: Network, label: "Switch" },
-  WEB: { color: "#3b82f6", icon: Server, label: "Web Server" },
-  DB: { color: "#a855f7", icon: HardDrive, label: "Database" },
-  WORKSTATION: { color: "#64748b", icon: Monitor, label: "Workstation" },
+  SECURITY_GATEWAY: { color: "#ef4444", icon: Shield },    // Rouge
+  ROUTER:           { color: "#10b981", icon: Router },    // Vert
+  SWITCH:           { color: "#f59e0b", icon: Network },   // Orange
+  SERVER:           { color: "#3b82f6", icon: Server },    // Bleu (Regroupe Web, DB, Cache)
+  WORKSTATION:      { color: "#64748b", icon: Monitor },   // Gris/Bleu
 };
 
 export default function InfraNode({ data, selected }: NodeProps) {
-  const config = ROLE_CONFIG[data.role] || { color: "#94a3b8", icon: Server, label: data.role };
+  // Si le rôle n'est pas trouvé, on fallback sur SERVER (Bleu)
+  const config = ROLE_CONFIG[data.role] || ROLE_CONFIG.SERVER;
   const Icon = config.icon;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-      {/* Cercle avec effet de Glow */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+      
+      {/* Cercle style Sketch */}
       <div style={{
-        width: '52px',
-        height: '52px',
+        position: 'relative',
+        width: '50px',
+        height: '50px',
         borderRadius: '50%',
-        backgroundColor: '#1e293b',
+        backgroundColor: 'white',
         border: `2px solid ${config.color}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        // Halo lumineux (box-shadow)
-        boxShadow: selected ? `0 0 25px ${config.color}` : `0 0 15px ${config.color}66`,
-        transition: 'all 0.3s ease',
+        boxShadow: selected ? `0 0 0 4px ${config.color}33` : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        transition: 'all 0.2s ease',
+        transform: selected ? 'scale(1.1)' : 'scale(1)',
       }}>
-        <Icon size={24} color={config.color} />
+        <Icon size={24} color={config.color} strokeWidth={2} />
         
-        {/* Les points d'accroche (Handles) sont masqués mais présents */}
-        <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-        <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+        {/* Handles invisibles pour ReactFlow */}
+        <Handle type="target" position={Position.Top} style={{ visibility: 'hidden' }} />
+        <Handle type="source" position={Position.Bottom} style={{ visibility: 'hidden' }} />
       </div>
 
-      {/* Libellés sous le nœud */}
+      {/* Libellé */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ color: 'white', fontSize: '11px', fontWeight: 'bold' }}>{data.hostname}</div>
-        <div style={{ color: '#64748b', fontSize: '9px', fontFamily: 'monospace' }}>{data.ip}</div>
+        <div style={{ color: '#334155', fontSize: '11px', fontWeight: '700' }}>
+          {data.hostname}
+        </div>
+        <div style={{ color: '#64748b', fontSize: '9px', fontFamily: 'monospace' }}>
+          {data.ip}
+        </div>
       </div>
     </div>
   );

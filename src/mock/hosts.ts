@@ -1,6 +1,5 @@
-// src/mock/hosts.ts
 export const mockHosts = [
-  // --- CORE / SECURITY ---
+  // --- LAYER 1: SECURITY GATEWAY ---
   {
     id: "gw-1",
     ip: "192.168.1.1",
@@ -14,20 +13,24 @@ export const mockHosts = [
       { port: 1194, protocol: "udp", serviceName: "openvpn", status: "open" },
     ],
   },
+
+  // --- LAYER 2: ROUTER ---
   {
     id: "r-a",
     ip: "192.168.1.254",
-    hostname: "router-a",
+    hostname: "router-core",
     os: "Cisco IOS",
     type: "router",
     services: ["Routing", "ACL"],
     lastSeen: "2026-01-15T00:00:00Z",
     ports: [{ port: 22, protocol: "tcp", serviceName: "ssh", status: "open" }],
   },
+
+  // --- LAYER 3: SWITCH ---
   {
     id: "sw-1",
     ip: "192.168.1.2",
-    hostname: "switch-1",
+    hostname: "switch-core",
     os: "ArubaOS",
     type: "switch",
     services: ["L2 Switching", "VLAN"],
@@ -35,49 +38,65 @@ export const mockHosts = [
     ports: [{ port: 22, protocol: "tcp", serviceName: "ssh", status: "open" }],
   },
 
-  // --- SERVERS ---
+  // --- LAYER 4: SERVERS (Maintenant 5 éléments) ---
   {
-    id: "1",
+    id: "srv-1",
     ip: "192.168.1.10",
     hostname: "srv-web",
-    os: "Linux",
+    os: "Ubuntu 22.04",
     type: "server",
-    services: ["HTTP", "Reverse Proxy"],
+    services: ["Nginx", "Reverse Proxy"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [
-      { port: 22, protocol: "tcp", serviceName: "ssh", status: "open" },
-      { port: 80, protocol: "tcp", serviceName: "http", status: "open" },
-    ],
+    ports: [{ port: 80, protocol: "tcp", serviceName: "http", status: "open" }],
   },
   {
-    id: "2",
+    id: "srv-2",
     ip: "192.168.1.20",
     hostname: "srv-db",
-    os: "Linux",
+    os: "Debian 12",
     type: "server",
     services: ["PostgreSQL"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [
-      { port: 22, protocol: "tcp", serviceName: "ssh", status: "open" },
-      { port: 5432, protocol: "tcp", serviceName: "postgres", status: "open" },
-    ],
+    ports: [{ port: 5432, protocol: "tcp", serviceName: "postgres", status: "open" }],
   },
   {
-    id: "3",
+    id: "srv-3",
     ip: "192.168.1.30",
     hostname: "srv-cache",
-    os: "Linux",
+    os: "Alpine Linux",
     type: "server",
     services: ["Redis"],
     lastSeen: "2026-01-15T00:00:00Z",
     ports: [{ port: 6379, protocol: "tcp", serviceName: "redis", status: "open" }],
   },
+  // NOUVEAU : Serveur de Monitoring
+  {
+    id: "srv-4",
+    ip: "192.168.1.40",
+    hostname: "srv-monitor",
+    os: "CentOS Stream",
+    type: "server",
+    services: ["Grafana", "Prometheus"],
+    lastSeen: "2026-01-15T00:00:00Z",
+    ports: [{ port: 3000, protocol: "tcp", serviceName: "grafana", status: "open" }],
+  },
+  // NOUVEAU : Serveur d'Authentification
+  {
+    id: "srv-5",
+    ip: "192.168.1.50",
+    hostname: "srv-auth",
+    os: "RedHat",
+    type: "server",
+    services: ["LDAP", "Keycloak"],
+    lastSeen: "2026-01-15T00:00:00Z",
+    ports: [{ port: 389, protocol: "tcp", serviceName: "ldap", status: "open" }],
+  },
 
-  // --- WORKSTATIONS ---
+  // --- LAYER 5: WORKSTATIONS (Maintenant 4 éléments) ---
   {
     id: "pc-1",
     ip: "192.168.1.101",
-    hostname: "workstation-1",
+    hostname: "bureau-rh",
     os: "Windows 11",
     type: "workstation",
     services: ["User Device"],
@@ -87,11 +106,33 @@ export const mockHosts = [
   {
     id: "pc-2",
     ip: "192.168.1.102",
-    hostname: "workstation-2",
+    hostname: "bureau-compta",
     os: "Windows 11",
     type: "workstation",
     services: ["User Device"],
     lastSeen: "2026-01-15T00:00:00Z",
     ports: [],
+  },
+  // NOUVEAU : Laptop de Dev
+  {
+    id: "pc-3",
+    ip: "192.168.1.103",
+    hostname: "dev-laptop",
+    os: "macOS Sonoma",
+    type: "workstation",
+    services: ["Dev Tools"],
+    lastSeen: "2026-01-15T00:00:00Z",
+    ports: [],
+  },
+  // NOUVEAU : Imprimante Réseau (Classée comme workstation pour être en bas)
+  {
+    id: "prt-1",
+    ip: "192.168.1.200",
+    hostname: "printer-main",
+    os: "Firmware v4",
+    type: "workstation",
+    services: ["IPP", "AirPrint"],
+    lastSeen: "2026-01-15T00:00:00Z",
+    ports: [{ port: 631, protocol: "tcp", serviceName: "ipp", status: "open" }],
   },
 ] as const;
