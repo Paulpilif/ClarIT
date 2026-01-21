@@ -12,21 +12,21 @@ import { useNavigate } from "react-router-dom";
 
 import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
+// Attention : vérifie que le nom du fichier correspond bien (s ou pas de s à Detail)
+import NodeDetailCard from "../Components/NodeDetailsCard"; 
 
 const nodeTypes = { infra: InfraNode };
 
-// On ne garde que les rôles du sketch
 type SketchRole = "SECURITY_GATEWAY" | "ROUTER" | "SWITCH" | "SERVER" | "WORKSTATION";
 
 const LAYERS_Y: Record<SketchRole, number> = {
   SECURITY_GATEWAY: 100,
   ROUTER: 250,
   SWITCH: 400,
-  SERVER: 550,       // Tous les serveurs (Web, DB, Cache) alignés ici
-  WORKSTATION: 700,  // Les PC en bas
+  SERVER: 550,
+  WORKSTATION: 700,
 };
 
-// Fonction simplifiée : Tout ce qui n'est pas réseau ou PC devient un SERVER
 function getRole(host: any): SketchRole {
   const type = host.type?.toLowerCase();
 
@@ -35,23 +35,19 @@ function getRole(host: any): SketchRole {
   if (type === "switch") return "SWITCH";
   if (type === "workstation") return "WORKSTATION";
   
-  // Par défaut, tout le reste (web, db, cache) est considéré comme un SERVER
   return "SERVER";
 }
 
 const initialNodes: Node[] = mockHosts.map((h) => {
   const role = getRole(h);
   
-  // Calcul de la position Pyramidale
   const centerX = 600; 
   const horizontalGap = 200; 
 
-  // On récupère tous les éléments qui ont EXACTEMENT le même rôle final
   const peers = mockHosts.filter(host => getRole(host) === role);
   const index = peers.findIndex(host => host.id === h.id);
   const total = peers.length;
 
-  // Formule pour centrer le groupe horizontalement
   const xPos = centerX + (index - (total - 1) / 2) * horizontalGap;
 
   return {
@@ -59,9 +55,8 @@ const initialNodes: Node[] = mockHosts.map((h) => {
     type: "infra",
     position: { x: xPos, y: LAYERS_Y[role] },
     data: {
-      hostname: h.hostname,
-      ip: h.ip,
-      role: role, // On envoie le rôle simplifié (ex: "SERVER") au composant
+      ...h,        // ✅ LA CORRECTION EST ICI : On passe TOUTES les infos (os, ports, services...)
+      role: role,  // On ajoute le rôle calculé par dessus
     },
   };
 });
@@ -71,24 +66,28 @@ export default function MapPage() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
 
-  // Génération automatique des liens hiérarchiques
+  // ✅ CORRECTION ICI AUSSI : On envoie directement 'node.data' au lieu de tout le 'node'
+  const onNodeMouseEnter = (_: React.MouseEvent, node: Node) => {
+    setHoveredNode(node.data);
+  };
+
+  const onNodeMouseLeave = () => {
+    setHoveredNode(null);
+  };
+
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
     
-    // On repère les équipements uniques
     const gateway = nodes.find(n => n.data.role === "SECURITY_GATEWAY");
     const router = nodes.find(n => n.data.role === "ROUTER");
     const sw = nodes.find(n => n.data.role === "SWITCH");
 
-    // 1. Gateway -> Router
     if (gateway && router) {
       edges.push({ id: 'e-gw-rt', source: gateway.id, target: router.id, style: { stroke: '#94a3b8', strokeDasharray: '5,5' } });
     }
-    // 2. Router -> Switch
     if (router && sw) {
       edges.push({ id: 'e-rt-sw', source: router.id, target: sw.id, style: { stroke: '#94a3b8', strokeDasharray: '5,5' } });
     }
-    // 3. Switch -> Tout le reste (Servers & Workstations)
     nodes.forEach(node => {
       if (sw && (node.data.role === "SERVER" || node.data.role === "WORKSTATION")) {
         edges.push({
@@ -110,12 +109,13 @@ export default function MapPage() {
       <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Architecture Réseau</h1>
       
       <div style={{ display: 'flex', gap: '20px', height: '85%' }}>
-        {/* Zone de la carte avec fond papier */}
         <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', background: '#f5f3ed', position: 'relative' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            onNodeMouseEnter={onNodeMouseEnter}
+            onNodeMouseLeave={onNodeMouseLeave}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             fitView
@@ -123,9 +123,12 @@ export default function MapPage() {
             <Background color="#cbd5e1" gap={30} size={1} />
             <Controls />
           </ReactFlow>
+          
+          {/* La carte s'affichera désormais avec les données ! */}
+          {hoveredNode && <NodeDetailCard node={hoveredNode} />}
         </div>
 
-        {/* Légende Simplifiée */}
+        {/* Légende */}
         <div style={{ width: '200px', padding: '15px', background: '#1e293b', borderRadius: '12px', height: 'fit-content' }}>
           <h3 style={{ fontWeight: 'bold', marginBottom: '15px' }}>Légende</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
