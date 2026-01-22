@@ -57,7 +57,9 @@ export const mockHosts = [
     type: "server",
     services: ["PostgreSQL"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [{ port: 5432, protocol: "tcp", serviceName: "postgres", status: "open" }],
+    ports: [
+      { port: 5432, protocol: "tcp", serviceName: "postgres", status: "open" },
+    ],
   },
   {
     id: "srv-3",
@@ -67,7 +69,9 @@ export const mockHosts = [
     type: "server",
     services: ["Redis"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [{ port: 6379, protocol: "tcp", serviceName: "redis", status: "open" }],
+    ports: [
+      { port: 6379, protocol: "tcp", serviceName: "redis", status: "open" },
+    ],
   },
   // NOUVEAU : Serveur de Monitoring
   {
@@ -78,7 +82,9 @@ export const mockHosts = [
     type: "server",
     services: ["Grafana", "Prometheus"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [{ port: 3000, protocol: "tcp", serviceName: "grafana", status: "open" }],
+    ports: [
+      { port: 3000, protocol: "tcp", serviceName: "grafana", status: "open" },
+    ],
   },
   // NOUVEAU : Serveur d'Authentification
   {
@@ -89,7 +95,9 @@ export const mockHosts = [
     type: "server",
     services: ["LDAP", "Keycloak"],
     lastSeen: "2026-01-15T00:00:00Z",
-    ports: [{ port: 389, protocol: "tcp", serviceName: "ldap", status: "open" }],
+    ports: [
+      { port: 389, protocol: "tcp", serviceName: "ldap", status: "open" },
+    ],
   },
 
   // --- LAYER 5: WORKSTATIONS (Maintenant 4 éléments) ---
