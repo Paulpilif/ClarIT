@@ -1,9 +1,9 @@
 {
   "nodes": [
     {
-      "id": "192-168-1-25",
-      "ip": "192.168.1.25",
-      "hostname": "air-de-paul.home",
+      "id": "10-101-5-70",
+      "ip": "10.101.5.70",
+      "hostname": "MacBook-Air-de-Paul.local",
       "type": "pc",
       "risk": "ok"
     },
@@ -11,20 +11,6 @@
       "id": "10-211-55-1",
       "ip": "10.211.55.1",
       "hostname": "",
-      "type": "server",
-      "risk": "ok"
-    },
-    {
-      "id": "10-211-55-6",
-      "ip": "10.211.55.6",
-      "hostname": "ubuntu.shared",
-      "type": "server",
-      "risk": "ok"
-    },
-    {
-      "id": "10-211-55-7",
-      "ip": "10.211.55.7",
-      "hostname": "kali.shared",
       "type": "server",
       "risk": "ok"
     },
@@ -62,22 +48,22 @@
   ],
   "links": [
     {
-      "source": "192-168-1-25",
+      "source": "10-101-5-70",
       "target": "10-211-55-2",
       "type": "rtsp"
     },
     {
-      "source": "192-168-1-25",
+      "source": "10-101-5-70",
       "target": "10-211-55-2",
       "type": "rtsp"
     },
     {
-      "source": "192-168-1-25",
+      "source": "10-101-5-70",
       "target": "10-211-55-2",
       "type": "http"
     },
     {
-      "source": "192-168-1-25",
+      "source": "10-101-5-70",
       "target": "10-211-55-2",
       "type": "http"
     }
