@@ -1,28 +1,24 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import DashboardPage from "./Pages/DashboardPage";
-import HostsPage from "./Pages/HostsPage";
-import LoginPage from "./Pages/LoginPage";
-import HostDetailsPage from "./Pages/HostDetailsPage";
-import MapPage from "./Pages/MapPage";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './Components/Layout';
+import DashboardPage from './Pages/DashboardPage';
+import MapPage from './Pages/MapPage';
+import SettingsPage from './Pages/SettingsPage';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <nav style={{ display: "flex", gap: 12 }}>
-        <Link to="/">Dashboard</Link>
-        <Link to="/hosts">Machines</Link>
-        <Link to="/login">Login</Link>
-        <Link to="/map">Cartographie</Link>
-
-      </nav>
-
       <Routes>
+        {/* Le Layout enveloppe toutes les pages */}
+        <Route element={<Layout />}>
+          
+          {/* Redirection par défaut : si on arrive sur "/", on va au dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
 
-        <Route path="/map" element={<MapPage />} />       
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/hosts" element={<HostsPage />} />
-        <Route path="/hosts/:id" element={<HostDetailsPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
