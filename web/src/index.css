@@ -1,3 +1,16 @@
-.react-flow__node {
-  cursor: pointer;
+@import "tailwindcss";
+
+/* Style de secours pour s'assurer que le texte est visible */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  background-color: #020617;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #020617;
 }

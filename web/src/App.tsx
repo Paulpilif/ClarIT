@@ -1,28 +1,48 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import DashboardPage from "./Pages/DashboardPage";
-import HostsPage from "./Pages/HostsPage";
-import LoginPage from "./Pages/LoginPage";
-import HostDetailsPage from "./Pages/HostDetailsPage";
-import MapPage from "./Pages/MapPage";
+import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './Components/Layout';
+import DashboardPage from './Pages/DashboardPage';
+import MapPage from './Pages/MapPage';
+import SettingsPage from './Pages/SettingsPage';
+import LoginPage from './Pages/LoginPage'; // <--- Import du login
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Au démarrage, on regarde si on est déjà connecté
+  useEffect(() => {
+    const auth = localStorage.getItem('isAuthenticated');
+    if (auth === 'true') setIsAuthenticated(true);
+  }, []);
+
+  const handleLogin = () => setIsAuthenticated(true);
+
+  const handleLogout = () => {
+    console.log("Déconnexion en cours...");
+    localStorage.removeItem('isAuthenticated');
+    setIsAuthenticated(false);
+    // L'état isAuthenticated étant passé à false, 
+    // le routeur affichera automatiquement le bloc (!isAuthenticated)
+  };
+
   return (
     <BrowserRouter>
-      <nav style={{ display: "flex", gap: 12 }}>
-        <Link to="/">Dashboard</Link>
-        <Link to="/hosts">Machines</Link>
-        <Link to="/login">Login</Link>
-        <Link to="/map">Cartographie</Link>
-
-      </nav>
-
       <Routes>
-
-        <Route path="/map" element={<MapPage />} />       
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/hosts" element={<HostsPage />} />
-        <Route path="/hosts/:id" element={<HostDetailsPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        {/* Si pas connecté, on montre uniquement le login */}
+        {!isAuthenticated ? (
+          <>
+            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          /* Si connecté, on montre le Layout avec le Dashboard */
+          <Route element={<Layout onLogout={handleLogout} />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+        )}
       </Routes>
     </BrowserRouter>
   );
