@@ -4,7 +4,8 @@ import Layout from './Components/Layout';
 import DashboardPage from './Pages/DashboardPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
-import LoginPage from './Pages/LoginPage'; // <--- Import du login
+import LoginPage from './Pages/LoginPage';
+import RegisterPage from './Pages/RegisterPage';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,10 +29,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Si pas connecté, on montre uniquement le login */}
+        {/* Si pas connecté, on montre uniquement le login et register */}
         {!isAuthenticated ? (
           <>
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         ) : (

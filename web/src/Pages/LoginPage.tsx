@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginPageProps {
   onLogin: () => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -93,6 +95,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             {isSubmitting ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
+
+        <div className="mt-6 pt-6 border-t border-slate-800">
+          <p className="text-slate-400 text-sm text-center mb-4">Pas encore de compte ?</p>
+          <button
+            onClick={() => navigate('/register')}
+            className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700 text-white font-medium py-3 rounded-lg transition-colors border border-slate-600"
+          >
+            <UserPlus size={18} />
+            <span>S'inscrire</span>
+          </button>
+        </div>
       </div>
     </div>
   );
