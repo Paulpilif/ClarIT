@@ -69,23 +69,21 @@ export default function MapPage() {
     const router = nodes.find(n => n.data.role === "ROUTER");
     const sw = nodes.find(n => n.data.role === "SWITCH");
 
-    // COULEURS DES LIGNES (EDGES) : Éclaircies pour le fond sombre
-    // stroke: '#64748b' (Slate-500) est assez visible mais discret
-    
-    if (gateway && router) {
-      edges.push({ id: 'e-gw-rt', source: gateway.id, target: router.id, style: { stroke: '#64748b', strokeDasharray: '5,5' } });
-    }
-    if (router && sw) {
-      edges.push({ id: 'e-rt-sw', source: router.id, target: sw.id, style: { stroke: '#64748b', strokeDasharray: '5,5' } });
-    }
+    const createLink = (source: string, target: string, color = '#3b82f6') => ({
+      id: `e-${source}-${target}`,
+      source,
+      target,
+      animated: true, // <--- C'EST ICI LA MAGIE
+      style: { stroke: color, strokeWidth: 1.5 },
+    });
+
+    if (gateway && router) edges.push(createLink(gateway.id, router.id, '#ef4444')); // Lien rouge (Internet)
+    if (router && sw) edges.push(createLink(router.id, sw.id, '#10b981')); // Lien vert (Backbone)
+
     nodes.forEach(node => {
       if (sw && (node.data.role === "SERVER" || node.data.role === "WORKSTATION")) {
-        edges.push({
-          id: `e-sw-${node.id}`,
-          source: sw.id,
-          target: node.id,
-          style: { stroke: '#475569', strokeWidth: 1.5 }, // Ligne continue plus sombre pour les liens finaux
-        });
+        // Liens bleus standards vers les machines
+        edges.push(createLink(sw.id, node.id, '#3b82f6'));
       }
     });
 
