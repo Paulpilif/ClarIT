@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-@theme {
-  /* On peut ajouter des personnalisations ici si besoin */
-}
-
 /* Style de secours pour s'assurer que le texte est visible */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
