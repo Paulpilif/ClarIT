@@ -16,53 +16,39 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsSubmitting(true);
     setError('');
 
+    // Simulation d'attente (pour l'effet UI)
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // --- ZONE DE DÉBOGAGE ---
-    console.log("--- Tentative de connexion ---");
-    console.log("Utilisateur saisi :", username);
-    console.log("Mot de passe saisi :", password);
-
-    // 1. Check Admin
+    // 1. Vérification Admin (En dur)
     const isAdmin = (username === 'ClarIT' && password === 'myefrei');
-    console.log("Est-ce Admin ?", isAdmin);
 
-    // 2. Check Utilisateurs
+    // 2. Vérification Utilisateurs (LocalStorage)
     const storedUsersString = localStorage.getItem('clarit_users');
-    console.log("Contenu brut localStorage (clarit_users) :", storedUsersString);
-    
     const storedUsers = storedUsersString ? JSON.parse(storedUsersString) : [];
-    console.log("Liste des utilisateurs analysée :", storedUsers);
-
-    // Recherche
-    const foundUser = storedUsers.find((u: any) => {
-      // On compare et on log chaque comparaison pour être sûr
-      const match = u.username === username && u.password === password;
-      return match;
-    });
-
-    console.log("Utilisateur trouvé dans la liste ?", foundUser);
-    // -------------------------
+    
+    const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
 
     if (isAdmin || foundUser) {
-      console.log(">>> CONNEXION RÉUSSIE");
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('currentUser', username);
+      // On sauvegarde qui est connecté (utile pour l'affichage plus tard)
+      localStorage.setItem('currentUser', username); 
       onLogin();
     } else {
-      console.log(">>> ÉCHEC CONNEXION");
       setError('Identifiants incorrects.');
       setIsSubmitting(false);
     }
   };
 
   return (
+    // Le style inline garantit que le fond prend tout l'écran, même sur mobile
     <div style={{ 
       display: 'flex', justifyContent: 'center', alignItems: 'center', 
       height: '100vh', width: '100vw', backgroundColor: '#020617',
       position: 'fixed', top: 0, left: 0, zIndex: 50
     }}>
+      {/* w-full + max-w-md + m-4 : Assure que la carte ne touche pas les bords sur mobile */}
       <div className="w-full max-w-md bg-[#0f172a] rounded-2xl shadow-2xl border border-slate-800 p-8 m-4">
+        
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/20 rounded-full mb-4 ring-1 ring-blue-500/30">
             <Shield className="w-8 h-8 text-blue-500" />
@@ -92,15 +78,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               placeholder="••••••••"
             />
           </div>
+          
           {error && (
             <div className="text-red-400 text-sm text-center bg-red-900/20 py-2 rounded border border-red-900/30">
               {error}
             </div>
           )}
+          
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
           >
             {isSubmitting ? 'Connexion...' : 'Se connecter'}
           </button>

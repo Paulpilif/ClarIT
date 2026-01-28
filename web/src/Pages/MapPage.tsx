@@ -8,7 +8,6 @@ import ReactFlow, {
   Controls
 } from "reactflow";
 import "reactflow/dist/style.css";
-// On retire useNavigate s'il n'est pas utilisé, sinon garde-le
 import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard"; 
@@ -73,16 +72,15 @@ export default function MapPage() {
       id: `e-${source}-${target}`,
       source,
       target,
-      animated: true, // <--- C'EST ICI LA MAGIE
+      animated: true,
       style: { stroke: color, strokeWidth: 1.5 },
     });
 
-    if (gateway && router) edges.push(createLink(gateway.id, router.id, '#ef4444')); // Lien rouge (Internet)
-    if (router && sw) edges.push(createLink(router.id, sw.id, '#10b981')); // Lien vert (Backbone)
+    if (gateway && router) edges.push(createLink(gateway.id, router.id, '#ef4444'));
+    if (router && sw) edges.push(createLink(router.id, sw.id, '#10b981'));
 
     nodes.forEach(node => {
       if (sw && (node.data.role === "SERVER" || node.data.role === "WORKSTATION")) {
-        // Liens bleus standards vers les machines
         edges.push(createLink(sw.id, node.id, '#3b82f6'));
       }
     });
@@ -93,13 +91,18 @@ export default function MapPage() {
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
   return (
-    // Fond global sombre
-    <div className="h-full w-full bg-[#020617] p-6 text-white flex flex-col">
-      <h1 className="text-2xl font-bold mb-6">Architecture Réseau</h1>
+    // AJOUT : Padding adaptatif (p-4 mobile, p-6 PC)
+    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col">
       
-      <div className="flex gap-6 flex-1 min-h-0">
-        {/* Zone de la carte : Fond Slate-900 pour contraster légèrement */}
-        <div className="flex-1 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
+      {/* AJOUT : Taille titre adaptative */}
+      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
+      
+      {/* AJOUT : Flex-col sur mobile, Flex-row sur PC (lg) */}
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
+        
+        {/* Zone de la carte */}
+        {/* AJOUT : min-h-[50vh] sur mobile pour s'assurer qu'on voit bien la carte */}
+        <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -109,8 +112,9 @@ export default function MapPage() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             fitView
+            // Optionnel : Désactive le zoom molette sur mobile pour éviter de coincer le scroll
+            panOnScroll={window.innerWidth >= 1024}
           >
-            {/* Grille : points gris foncé discrets */}
             <Background color="#334155" gap={30} size={1} />
             <Controls className="bg-slate-800 border-slate-700 fill-white" />
           </ReactFlow>
@@ -119,9 +123,12 @@ export default function MapPage() {
         </div>
 
         {/* Légende */}
-        <div className="w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
+        {/* AJOUT : Largeur 100% sur mobile, fixe w-52 sur PC */}
+        <div className="w-full lg:w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
           <h3 className="font-bold mb-4 text-slate-200">Légende</h3>
-          <div className="flex flex-col gap-3 text-sm text-slate-400">
+          
+          {/* AJOUT : Grid 2 colonnes sur mobile, Flex vertical sur PC */}
+          <div className="grid grid-cols-2 gap-3 text-sm text-slate-400 lg:flex lg:flex-col">
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
