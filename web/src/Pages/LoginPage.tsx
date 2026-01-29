@@ -16,11 +16,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsSubmitting(true);
     setError('');
 
-    // Simulation d'attente (pour l'effet UI)
+    // Simulation d'attente
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // 1. Vérification Admin (En dur)
-    const isAdmin = (username === 'ClarIT' && password === 'myefrei');
+    // 1. Vérification Super Admin (En dur)
+    if (username === 'ClarIT' && password === 'myefrei') {
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('currentUser', username);
+      localStorage.setItem('userRole', 'ADMIN'); // <--- FORCE ADMIN
+      onLogin();
+      return;
+    }
 
     // 2. Vérification Utilisateurs (LocalStorage)
     const storedUsersString = localStorage.getItem('clarit_users');
@@ -28,10 +34,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     
     const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
 
-    if (isAdmin || foundUser) {
+    if (foundUser) {
       localStorage.setItem('isAuthenticated', 'true');
-      // On sauvegarde qui est connecté (utile pour l'affichage plus tard)
-      localStorage.setItem('currentUser', username); 
+      localStorage.setItem('currentUser', username);
+      // NOUVEAU : On récupère le rôle de l'utilisateur, ou 'USER' par sécurité
+      localStorage.setItem('userRole', foundUser.role || 'USER'); 
       onLogin();
     } else {
       setError('Identifiants incorrects.');
@@ -40,13 +47,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    // Le style inline garantit que le fond prend tout l'écran, même sur mobile
     <div style={{ 
       display: 'flex', justifyContent: 'center', alignItems: 'center', 
       height: '100vh', width: '100vw', backgroundColor: '#020617',
       position: 'fixed', top: 0, left: 0, zIndex: 50
     }}>
-      {/* w-full + max-w-md + m-4 : Assure que la carte ne touche pas les bords sur mobile */}
       <div className="w-full max-w-md bg-[#0f172a] rounded-2xl shadow-2xl border border-slate-800 p-8 m-4">
         
         <div className="text-center mb-8">

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Users, Trash2, Save } from 'lucide-react';
+import { UserPlus, Users, Trash2, Save, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
   const [newUser, setNewUser] = useState('');
   const [newPass, setNewPass] = useState('');
+  // NOUVEAU : État pour le rôle
+  const [newRole, setNewRole] = useState('USER'); 
+  
   const [feedback, setFeedback] = useState({ msg: '', type: '' });
   const [usersList, setUsersList] = useState<any[]>([]);
 
@@ -21,7 +24,14 @@ export default function SettingsPage() {
       return;
     }
 
-    const userToAdd = { username: newUser, password: newPass, createdAt: new Date().toLocaleDateString() };
+    // NOUVEAU : On ajoute le rôle à l'objet utilisateur
+    const userToAdd = { 
+      username: newUser, 
+      password: newPass, 
+      role: newRole, // <--- Ici
+      createdAt: new Date().toLocaleDateString() 
+    };
+
     const updatedList = [...usersList, userToAdd];
     
     setUsersList(updatedList);
@@ -29,6 +39,7 @@ export default function SettingsPage() {
     
     setNewUser('');
     setNewPass('');
+    setNewRole('USER'); // Reset du rôle par défaut
     setFeedback({ msg: `Utilisateur ${newUser} créé !`, type: 'success' });
     setTimeout(() => setFeedback({ msg: '', type: '' }), 3000);
   };
@@ -40,16 +51,13 @@ export default function SettingsPage() {
   };
 
   return (
-    // AJOUT : p-4 sur mobile, md:p-8 sur PC
     <div className="p-4 md:p-8 max-w-4xl mx-auto text-white">
       
       <header className="mb-6 md:mb-8 border-b border-slate-800 pb-4">
-        {/* AJOUT : Texte adaptatif (2xl -> 3xl) */}
         <h1 className="text-2xl md:text-3xl font-bold mb-2">Paramètres Admin</h1>
         <p className="text-slate-400 text-sm md:text-base">Gestion des accès et de la configuration</p>
       </header>
 
-      {/* Grid : 1 colonne mobile, 2 colonnes PC */}
       <div className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2">
         
         {/* --- COLONNE 1 : Créer un utilisateur --- */}
@@ -84,6 +92,19 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* NOUVEAU : Sélecteur de Rôle */}
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Rôle d'accès</label>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="w-full bg-[#1e293b] border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-white appearance-none cursor-pointer"
+              >
+                <option value="USER">Utilisateur (Lecture seule)</option>
+                <option value="ADMIN">Administrateur (Accès complet)</option>
+              </select>
+            </div>
+
             {feedback.msg && (
               <div className={`text-sm py-2 px-3 rounded border ${feedback.type === 'success' ? 'bg-emerald-900/20 border-emerald-900/30 text-emerald-400' : 'bg-red-900/20 border-red-900/30 text-red-400'}`}>
                 {feedback.msg}
@@ -116,7 +137,9 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-500">Root</p>
                 </div>
               </div>
-              <span className="text-xs bg-blue-900/30 text-blue-400 px-2 py-1 rounded shrink-0">Admin</span>
+              <span className="text-xs bg-blue-900/30 text-blue-400 px-2 py-1 rounded shrink-0 flex items-center gap-1">
+                <Shield size={10} /> Admin
+              </span>
             </div>
 
             {/* Liste dynamique */}
@@ -135,14 +158,25 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-500">{user.createdAt}</p>
                   </div>
                 </div>
-                
-                <button 
-                  onClick={() => handleDeleteUser(user.username)}
-                  className="text-slate-500 hover:text-red-400 p-2 rounded hover:bg-red-900/20 transition-colors shrink-0"
-                  title="Supprimer"
-                >
-                  <Trash2 size={18} />
-                </button>
+
+                <div className="flex items-center gap-2">
+                  {/* NOUVEAU : Badge de rôle */}
+                  <span className={`text-[10px] px-2 py-1 rounded border uppercase font-bold ${
+                    user.role === 'ADMIN' 
+                      ? 'bg-purple-900/20 border-purple-900/30 text-purple-400' 
+                      : 'bg-slate-800 border-slate-700 text-slate-400'
+                  }`}>
+                    {user.role === 'ADMIN' ? 'Admin' : 'User'}
+                  </span>
+                  
+                  <button 
+                    onClick={() => handleDeleteUser(user.username)}
+                    className="text-slate-500 hover:text-red-400 p-2 rounded hover:bg-red-900/20 transition-colors shrink-0"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
