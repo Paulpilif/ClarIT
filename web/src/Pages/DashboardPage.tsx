@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Server, ShieldAlert, Activity, Cpu, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 // Import des données partagées
 import { mockHosts } from '../mock/hosts';
 
 export default function DashboardPage() {
   // État pour les métriques instantanées
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalMachines: 0,
     activeAlerts: 0,
@@ -97,6 +99,7 @@ export default function DashboardPage() {
           icon={<Server size={22} className="text-blue-500" />} 
           trend="Nœuds connectés"
           color="blue"
+          onClick={() => navigate('/hosts')}
         />
 
         <StatCard 
@@ -106,6 +109,7 @@ export default function DashboardPage() {
           trend={stats.activeAlerts > 0 ? "Attention requise" : "Système sain"}
           isNegative={stats.activeAlerts > 0}
           color={stats.activeAlerts > 0 ? "red" : "emerald"}
+          onClick={() => navigate('/hosts')}
         />
 
         <StatCard 
@@ -140,7 +144,7 @@ export default function DashboardPage() {
             <span className="text-xs text-slate-500 font-mono bg-slate-900 px-2 py-1 rounded">Dernières 60s</span>
           </div>
 
-          <div className="h-[300px] w-full">
+          <div className="h-75 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trafficData}>
                 <defs>
@@ -196,8 +200,8 @@ export default function DashboardPage() {
 }
 
 // Composant Carte Réutilisable
-function StatCard({ title, value, icon, trend, isNegative, trendUp, color }: any) {
-    // Mapping des couleurs pour les bordures/glow au survol
+// Ajoute onClick dans les props
+function StatCard({ title, value, icon, trend, isNegative, trendUp, color, onClick }: any) {
     const colorClasses: any = {
         blue: "group-hover:border-blue-500/50 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]",
         red: "group-hover:border-red-500/50 group-hover:shadow-[0_0_20px_rgba(239,68,68,0.1)]",
@@ -207,7 +211,14 @@ function StatCard({ title, value, icon, trend, isNegative, trendUp, color }: any
     };
 
     return (
-      <div className={`bg-[#0f172a] p-6 rounded-xl border border-slate-800 transition-all duration-300 group ${colorClasses[color] || ""}`}>
+      <div 
+        onClick={onClick} // 1. On branche le clic ici
+        className={`
+            bg-[#0f172a] p-6 rounded-xl border border-slate-800 transition-all duration-300 group 
+            ${colorClasses[color] || ""}
+            ${onClick ? "cursor-pointer hover:bg-slate-800/80 active:scale-95" : ""} // 2. Effet visuel au clic
+        `}
+      >
         <div className="flex justify-between items-start mb-4">
           <div>
             <p className="text-slate-400 text-sm font-medium mb-1">{title}</p>
