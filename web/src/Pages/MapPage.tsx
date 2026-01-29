@@ -11,6 +11,8 @@ import "reactflow/dist/style.css";
 import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard"; 
+// AJOUT 1 : Import du nouveau panneau latéral
+import MachineDetailPanel from "../Components/MachineDetailPanel";
 
 const nodeTypes = { infra: InfraNode };
 
@@ -52,10 +54,27 @@ const initialNodes: Node[] = mockHosts.map((h) => {
 
 export default function MapPage() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  
+  // AJOUT 2 : État pour gérer le clic (Sélection) vs le survol (Hover)
+  const [selectedNode, setSelectedNode] = useState<any>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
 
+  // AJOUT 3 : Gestionnaire de clic sur un nœud
+  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+    setSelectedNode(node.data); // Ouvre le panneau
+    setHoveredNode(null);       // Cache l'infobulle pour ne pas gêner
+  };
+
+  // AJOUT 4 : Gestionnaire de clic dans le vide (pour fermer le panneau)
+  const onPaneClick = () => {
+    setSelectedNode(null);
+  };
+
   const onNodeMouseEnter = (_: React.MouseEvent, node: Node) => {
-    setHoveredNode(node.data);
+    // On affiche l'infobulle seulement si le panneau n'est pas ouvert
+    if (!selectedNode) {
+        setHoveredNode(node.data);
+    }
   };
 
   const onNodeMouseLeave = () => {
@@ -91,43 +110,38 @@ export default function MapPage() {
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
   return (
-    // AJOUT : Padding adaptatif (p-4 mobile, p-6 PC)
-    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col">
+    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col relative overflow-hidden">
       
-      {/* AJOUT : Taille titre adaptative */}
       <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
       
-      {/* AJOUT : Flex-col sur mobile, Flex-row sur PC (lg) */}
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
         
         {/* Zone de la carte */}
-        {/* AJOUT : min-h-[50vh] sur mobile pour s'assurer qu'on voit bien la carte */}
         <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            onNodeClick={onNodeClick}         // <--- Déclenche l'ouverture du panneau
+            onPaneClick={onPaneClick}         // <--- Déclenche la fermeture si clic dans le vide
             onNodeMouseEnter={onNodeMouseEnter}
             onNodeMouseLeave={onNodeMouseLeave}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             fitView
-            // Optionnel : Désactive le zoom molette sur mobile pour éviter de coincer le scroll
             panOnScroll={window.innerWidth >= 1024}
           >
             <Background color="#334155" gap={30} size={1} />
             <Controls className="bg-slate-800 border-slate-700 fill-white" />
           </ReactFlow>
           
-          {hoveredNode && <NodeDetailCard node={hoveredNode} />}
+          {/* L'infobulle ne s'affiche que si rien n'est sélectionné */}
+          {hoveredNode && !selectedNode && <NodeDetailCard node={hoveredNode} />}
         </div>
 
         {/* Légende */}
-        {/* AJOUT : Largeur 100% sur mobile, fixe w-52 sur PC */}
         <div className="w-full lg:w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
           <h3 className="font-bold mb-4 text-slate-200">Légende</h3>
-          
-          {/* AJOUT : Grid 2 colonnes sur mobile, Flex vertical sur PC */}
           <div className="grid grid-cols-2 gap-3 text-sm text-slate-400 lg:flex lg:flex-col">
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
@@ -137,6 +151,14 @@ export default function MapPage() {
           </div>
         </div>
       </div>
+
+      {/* AJOUT 5 : Le panneau coulissant s'affiche ici si un nœud est sélectionné */}
+      {selectedNode && (
+        <MachineDetailPanel 
+          node={selectedNode} 
+          onClose={() => setSelectedNode(null)} 
+        />
+      )}
     </div>
   );
 }
