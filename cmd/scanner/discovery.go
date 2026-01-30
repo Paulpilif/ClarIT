@@ -59,13 +59,66 @@ func DiscoverHosts(ctx context.Context, cidr string) ([]DiscoveredHost, error) {
 // Pour le Reverse DNS / hostname
 func getHostname(h nmap.Host) string {
 	if len(h.Hostnames) > 0 {
-		return h.Hostnames[0].Name
+		for _, hn := range h.Hostnames {
+			if hn.Name != "" {
+				return strings.TrimSuffix(hn.Name, ".")
+			}
+		}
 	}
-	if len(h.Addresses) > 0 { // fallback et reverse lookup
-		names, err := net.LookupAddr(h.Addresses[0].Addr)
+
+	if len(h.Addresses) > 0 {
+		ip := h.Addresses[0].Addr
+		names, err := net.LookupAddr(ip)
 		if err == nil && len(names) > 0 {
 			return strings.TrimSuffix(names[0], ".")
 		}
 	}
-	return ""
+
+	if len(h.Addresses) > 0 {
+		return h.Addresses[0].Addr
+	}
+
+	return "unknown"
+}
+
+func MayBeDomainController(services []Service) bool {
+	for _, s := range services {
+		switch s.Name {
+		case "ldap", "kerberos", "dns", "msrpc":
+			return true
+		}
+	}
+	return false
+}
+
+func MayBeWorkstation(n *Node) bool {
+	openPorts := map[int]bool{}
+	serviceCount := len(n.Services)
+
+	for _, s := range n.Services {
+		openPorts[s.Port] = true
+
+		switch strings.ToLower(s.Name) {
+		case "ldap", "kerberos", "mysql", "postgresql",
+			"http", "https", "dns", "ntp", "msrpc":
+			return false
+		}
+	}
+
+	if serviceCount > 5 {
+		return false
+	}
+
+	if openPorts[3389] || openPorts[5900] || openPorts[5357] || openPorts[5358] {
+		return true
+	}
+
+	hn := strings.ToLower(n.Hostname)
+	if strings.HasPrefix(hn, "pc-") ||
+		strings.HasPrefix(hn, "laptop-") ||
+		strings.HasPrefix(hn, "desktop-") {
+		return true
+	}
+
+	return false
 }

@@ -86,19 +86,75 @@ func EnrichGraph(g *NetworkGraph) {
 	for i := range g.Nodes {
 		n := &g.Nodes[i]
 		risk := "ok"
-
 		for _, s := range n.Services {
 			if isVulnerable(s.Name, s.Version) {
 				risk = "vulnerable"
 				break
 			}
-			if isObsolete(s.Name, s.Version) {
+			if isObsolete(s.Name, s.Version) && risk != "vulnerable" {
 				risk = "obsolete"
 			}
 		}
 		n.Risk = risk
+
+		n.Type = ClassifyNode(n)
 	}
 }
+
+
+func ClassifyNode(n *Node) string {
+	ports := map[int]bool{}
+	services := map[string]bool{}
+
+	for _, s := range n.Services {
+		ports[s.Port] = true
+		services[strings.ToLower(s.Name)] = true
+	}
+
+	if ports[22] && ports[443] && len(n.Services) < 5 {
+		return "firewall"
+	}
+
+	if services["vmware-auth"] || ports[902] || ports[903] {
+		return "hypervisor"
+	}
+
+	if ports[53] && (ports[67] || ports[68]) {
+		return "network-device"
+	}
+
+	if MayBeDomainController(n.Services) ||
+		(ports[389] && (ports[88] || ports[445])) {
+		return "domain-controller"
+	}
+
+	if ports[3306] || ports[5432] || ports[27017] {
+		return "database-server"
+	}
+
+	if ports[80] || ports[443] {
+		return "web-server"
+	}
+
+	if ports[8080] || ports[8443] {
+		return "application-server"
+	}
+
+	if ports[22] && len(ports) <= 3 {
+		return "bastion"
+	}
+
+	if MayBeWorkstation(n) {
+		return "workstation"
+	}
+
+	if len(n.Services) >= 3 {
+		return "server"
+	}
+
+	return "unknown"
+}
+
 
 // Risk
 
