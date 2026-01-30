@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, Network, Settings, Activity, LogOut, Menu, X } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 // Interface pour TypeScript
 interface LayoutProps {
@@ -8,6 +9,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ onLogout }: LayoutProps) {
+  const { hasAccess } = useUser();
   // État pour gérer l'ouverture/fermeture du menu sur mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -50,15 +52,7 @@ export default function Layout({ onLogout }: LayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 mt-16 md:mt-4">
-          <NavLink 
-            to="/dashboard" 
-            onClick={closeMobileMenu} // Ferme le menu au clic
-            className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive ? 'bg-[#1E40AF] text-[#E6EDF3]' : 'text-[#8B949E] hover:bg-[#21262D]'}`}
-          >
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </NavLink>
-
+          {/* Cartographie - Accessible à tous */}
           <NavLink 
             to="/map" 
             onClick={closeMobileMenu}
@@ -67,6 +61,30 @@ export default function Layout({ onLogout }: LayoutProps) {
             <Network size={20} />
             <span>Cartographie</span>
           </NavLink>
+
+          {/* Inventaire - Accessible Navigateur & Amiral */}
+          {(hasAccess('inventory')) && (
+            <NavLink 
+              to="/inventory" 
+              onClick={closeMobileMenu}
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive ? 'bg-[#1E40AF] text-[#E6EDF3]' : 'text-[#8B949E] hover:bg-[#21262D]'}`}
+            >
+              <LayoutDashboard size={20} />
+              <span>Inventaire</span>
+            </NavLink>
+          )}
+
+          {/* Dashboard - Accessible Amiral uniquement */}
+          {hasAccess('dashboard') && (
+            <NavLink 
+              to="/dashboard" 
+              onClick={closeMobileMenu}
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive ? 'bg-[#1E40AF] text-[#E6EDF3]' : 'text-[#8B949E] hover:bg-[#21262D]'}`}
+            >
+              <LayoutDashboard size={20} />
+              <span>Dashboard</span>
+            </NavLink>
+          )}
 
           <NavLink 
             to="/settings" 
