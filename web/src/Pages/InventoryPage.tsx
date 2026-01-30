@@ -1,6 +1,9 @@
 import { enrichedHosts } from '../mock/dashboard-data';
+import { useScan } from '../contexts/ScanContext';
+import { AlertCircle } from 'lucide-react';
 
 export default function InventoryPage() {
+  const { scanCompleted } = useScan();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -26,6 +29,22 @@ export default function InventoryPage() {
         </p>
       </header>
 
+      {!scanCompleted ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-8 max-w-md text-center">
+            <div className="flex justify-center mb-4">
+              <AlertCircle className="text-amber-600" size={48} />
+            </div>
+            <h2 className="text-xl font-bold text-amber-900 mb-2">
+              Scan requis
+            </h2>
+            <p className="text-amber-800 text-sm">
+              Veuillez lancer un scan réseau depuis la Cartographie pour accéder à l'inventaire des machines.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Inventory Table */}
       <div className="overflow-x-auto bg-white rounded-xl border-2 border-[#2F2F2F]">
         <table className="w-full">
@@ -159,6 +178,8 @@ export default function InventoryPage() {
           </p>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
