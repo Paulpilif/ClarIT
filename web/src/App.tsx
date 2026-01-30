@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Components/Layout';
+import MachineDetailPanel from './Components/MachineDetailPanel';
 import DashboardPage from './Pages/DashboardPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
 import LoginPage from './Pages/LoginPage';
 import RegisterPage from './Pages/RegisterPage';
+import HostsPage from './Pages/HostsPage'; // <--- Import du login
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,6 +42,8 @@ export default function App() {
           /* Si connecté, on montre le Layout avec le Dashboard */
           <Route element={<Layout onLogout={handleLogout} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/hosts" element={<HostsPage />} />
+            <Route path="/hosts/:id" element={<MachineDetailPanel />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

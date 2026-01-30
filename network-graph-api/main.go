@@ -33,8 +33,12 @@ func initNeo4j() {
 
 func main() {
 	initNeo4j()
+	initAuthDB()
 
 	defer driver.Close(context.Background())
+	if authDB != nil {
+		defer authDB.Close()
+	}
 	r := gin.Default()
 
 	// Route POST pour recevoir les données
@@ -65,6 +69,10 @@ func main() {
 
 		c.JSON(http.StatusOK, graph)
 	})
+
+	r.POST("/api/v1/login", loginHandler(authDB))
+	r.POST("/api/v1/users", createUserHandler(authDB))
+	r.GET("/api/v1/health", healthHandler(authDB))
 
 	r.Run(":8080")
 }

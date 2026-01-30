@@ -43,6 +43,18 @@
           "port": 7000,
           "protocol": "tcp",
           "name": "rtsp"
+        },
+        {
+          "port": 8080,
+          "protocol": "tcp",
+          "name": "http",
+          "version": "Golang net/http server"
+        },
+        {
+          "port": 8090,
+          "protocol": "tcp",
+          "name": "http",
+          "version": "Golang net/http server"
         }
       ],
       "risk": "ok"
@@ -58,6 +70,16 @@
       "source": "192-168-1-25",
       "target": "10-211-55-2",
       "type": "rtsp"
+    },
+    {
+      "source": "192-168-1-25",
+      "target": "10-211-55-2",
+      "type": "http"
+    },
+    {
+      "source": "192-168-1-25",
+      "target": "10-211-55-2",
+      "type": "http"
     }
   ]
 }
