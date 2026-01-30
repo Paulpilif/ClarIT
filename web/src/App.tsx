@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Components/Layout';
 import HomePage from './Pages/HomePage';
+import PricingPage from './Pages/PricingPage';
 import DashboardPage from './Pages/DashboardPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
@@ -31,8 +32,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Page d'accueil publique */}
+        {/* Pages publiques */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         
         {/* Si pas connecté, on montre login et register */}
         {!isAuthenticated ? (

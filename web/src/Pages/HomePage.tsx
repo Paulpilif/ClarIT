@@ -20,13 +20,13 @@ export default function HomePage() {
 
             {/* Navigation Links */}
             <div className="flex items-center gap-8">
-              <a href="#" className="text-black hover:text-gray-600 font-medium transition-colors">
+              <a href="/" className="text-black hover:text-gray-600 font-medium transition-colors">
                 Accueil
               </a>
               <a href="#" className="text-black hover:text-gray-600 font-medium transition-colors">
                 Entreprise
               </a>
-              <a href="#" className="text-black hover:text-gray-600 font-medium transition-colors">
+              <a href="/pricing" className="text-black hover:text-gray-600 font-medium transition-colors">
                 Pricing
               </a>
             </div>
