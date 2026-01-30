@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, Network, Settings, Activity, LogOut, Menu, X } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { useScan } from '../contexts/ScanContext';
 
 // Interface pour TypeScript
 interface LayoutProps {
@@ -10,6 +11,7 @@ interface LayoutProps {
 
 export default function Layout({ onLogout }: LayoutProps) {
   const { hasAccess } = useUser();
+  const { scanCompleted } = useScan();
   // État pour gérer l'ouverture/fermeture du menu sur mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -62,8 +64,8 @@ export default function Layout({ onLogout }: LayoutProps) {
             <span>Cartographie</span>
           </NavLink>
 
-          {/* Inventaire - Accessible Navigateur & Amiral */}
-          {(hasAccess('inventory')) && (
+          {/* Inventaire - Accessible Navigateur & Amiral (seulement si scan complété) */}
+          {(hasAccess('inventory') && scanCompleted) && (
             <NavLink 
               to="/inventory" 
               onClick={closeMobileMenu}

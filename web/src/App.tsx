@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Components/Layout';
 import { UserProvider } from './contexts/UserContext';
+import { ScanProvider } from './contexts/ScanContext';
 import HomePage from './Pages/HomePage';
 import PricingPage from './Pages/PricingPage';
 import DashboardPage from './Pages/DashboardPage';
@@ -33,11 +34,12 @@ export default function App() {
 
   return (
     <UserProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Pages publiques */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/pricing" element={<PricingPage />} />
+      <ScanProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Pages publiques */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/pricing" element={<PricingPage />} />
           
           {/* Si pas connecté, on montre login et register */}
           {!isAuthenticated ? (
@@ -57,7 +59,8 @@ export default function App() {
           </Route>
         )}
       </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ScanProvider>
     </UserProvider>
   );
 }

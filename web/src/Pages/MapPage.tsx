@@ -12,6 +12,7 @@ import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
 import { Zap, CheckCircle } from "lucide-react";
+import { useScan } from "../contexts/ScanContext";
 
 const nodeTypes = { infra: InfraNode };
 
@@ -52,6 +53,7 @@ const initialNodes: Node[] = mockHosts.map((h) => {
 });
 
 export default function MapPage() {
+  const { setScanCompleted } = useScan();
   const [scanStarted, setScanStarted] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
@@ -61,6 +63,7 @@ export default function MapPage() {
     setIsScanning(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setScanStarted(true);
+    setScanCompleted(true);
     setIsScanning(false);
   };
 
