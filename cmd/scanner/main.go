@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,10 +37,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	normalizedCIDR, err := normalizeCIDR(cidr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), *timeoutFlag)
 	defer cancel()
 
-	graph, filename, err := runScan(ctx, cidr, *saveFlag)
+	graph, filename, err := runScan(ctx, normalizedCIDR, *saveFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,4 +58,24 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+}
+
+func normalizeCIDR(input string) (string, error) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return "", fmt.Errorf("cidr vide")
+	}
+	if strings.EqualFold(trimmed, "localhost") {
+		return "127.0.0.1/32", nil
+	}
+	if _, _, err := net.ParseCIDR(trimmed); err == nil {
+		return trimmed, nil
+	}
+	if ip := net.ParseIP(trimmed); ip != nil {
+		if ip.To4() != nil {
+			return ip.String() + "/32", nil
+		}
+		return ip.String() + "/128", nil
+	}
+	return "", fmt.Errorf("cidr invalide: %q", input)
 }

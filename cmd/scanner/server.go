@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,14 +26,15 @@ type scanResponse struct {
 func startServer(listenAddr string, timeout time.Duration) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/scan", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
 		req := scanRequest{}
 		if r.Body != nil {
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxScanBodyBytes)
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 				log.Printf("/scan: invalid JSON body: %v", err)
 			}
 		}
@@ -51,10 +55,16 @@ func startServer(listenAddr string, timeout time.Duration) {
 			return
 		}
 
+		normalizedCIDR, err := normalizeCIDR(req.CIDR)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
-		graph, filename, err := runScan(ctx, req.CIDR, save)
+		graph, filename, err := runScan(ctx, normalizedCIDR, save)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -85,6 +95,13 @@ func startServer(listenAddr string, timeout time.Duration) {
 	}
 }
 
+const (
+	maxScanBodyBytes         = 1 << 20
+	bulkFingerprintThreshold = 24
+	fingerprintWorkers       = 6
+	perHostTimeout           = 45 * time.Second
+)
+
 func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string, error) {
 	hosts, err := DiscoverHosts(ctx, cidr)
 	if err != nil {
@@ -92,21 +109,28 @@ func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string,
 	}
 	if len(hosts) == 0 {
 		log.Println("Pas d'host decouverts")
+		baseIP := getCIDRBaseIP(cidr)
 		hosts = append(hosts, DiscoveredHost{
-			IP:       strings.Split(cidr, "/")[0],
+			IP:       baseIP,
 			Hostname: "",
 		})
 	}
 
+	enableOSDetection := shouldEnableOSDetection()
+
 	fingerprints := []*HostFingerprint{}
-	for _, h := range hosts {
-		log.Printf("Fingerprinting %s", h.IP)
-		fp, err := FingerprintHost(ctx, h)
+	if len(hosts) >= bulkFingerprintThreshold {
+		log.Printf("Bulk fingerprinting (%d hosts)", len(hosts))
+		fps, err := FingerprintHosts(ctx, hosts, enableOSDetection)
 		if err != nil {
-			log.Printf("scan failed for %s: %v", h.IP, err)
-			continue
+			log.Printf("bulk fingerprint failed: %v", err)
+		} else {
+			fingerprints = fps
 		}
-		fingerprints = append(fingerprints, fp)
+	}
+
+	if len(fingerprints) == 0 {
+		fingerprints = fingerprintWithWorkerPool(ctx, hosts, enableOSDetection)
 	}
 
 	graph := BuildGraph(fingerprints)
@@ -121,6 +145,73 @@ func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string,
 	}
 
 	return graph, filename, nil
+}
+
+type fingerprintResult struct {
+	fp   *HostFingerprint
+	err  error
+	host DiscoveredHost
+}
+
+func fingerprintWithWorkerPool(ctx context.Context, hosts []DiscoveredHost, enableOSDetection bool) []*HostFingerprint {
+	if len(hosts) == 0 {
+		return []*HostFingerprint{}
+	}
+
+	workers := fingerprintWorkers
+	if len(hosts) < workers {
+		workers = len(hosts)
+	}
+
+	jobs := make(chan DiscoveredHost)
+	results := make(chan fingerprintResult, len(hosts))
+	var wg sync.WaitGroup
+
+	worker := func() {
+		defer wg.Done()
+		for h := range jobs {
+			hostCtx, cancel := context.WithTimeout(ctx, perHostTimeout)
+			fp, err := FingerprintHost(hostCtx, h, enableOSDetection)
+			cancel()
+			results <- fingerprintResult{fp: fp, err: err, host: h}
+		}
+	}
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go worker()
+	}
+
+	for _, h := range hosts {
+		jobs <- h
+	}
+	close(jobs)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	fingerprints := []*HostFingerprint{}
+	for res := range results {
+		if res.err != nil {
+			log.Printf("scan failed for %s: %v", res.host.IP, res.err)
+			continue
+		}
+		if res.fp != nil {
+			fingerprints = append(fingerprints, res.fp)
+		}
+	}
+
+	return fingerprints
+}
+
+func getCIDRBaseIP(cidr string) string {
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil || ipNet == nil {
+		return strings.Split(cidr, "/")[0]
+	}
+	return ipNet.IP.String()
 }
 
 func printGraphJSON(w *os.File, g *NetworkGraph) error {
