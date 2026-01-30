@@ -21,6 +21,7 @@ export default function App() {
   const handleLogout = () => {
     console.log("Déconnexion en cours...");
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('currentUser');
     setIsAuthenticated(false);
     // L'état isAuthenticated étant passé à false, 
     // le routeur affichera automatiquement le bloc (!isAuthenticated)

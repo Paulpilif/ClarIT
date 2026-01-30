@@ -6,20 +6,41 @@ export default function SettingsPage() {
   const [currentUser] = useState(localStorage.getItem('currentUser'));
 
   useEffect(() => {
-    const stored = localStorage.getItem('clarit_users');
-    if (stored) {
-      setUsersList(JSON.parse(stored));
-    }
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/users');
+        if (response.ok) {
+          const users = await response.json();
+          setUsersList(users);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des utilisateurs:', err);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
-  const handleDeleteUser = (usernameToDelete: string) => {
+  const handleDeleteUser = async (usernameToDelete: string) => {
     if (usernameToDelete === currentUser) {
       alert('Vous ne pouvez pas supprimer votre propre compte');
       return;
     }
-    const updatedList = usersList.filter(u => u.username !== usernameToDelete);
-    setUsersList(updatedList);
-    localStorage.setItem('clarit_users', JSON.stringify(updatedList));
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/${usernameToDelete}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setUsersList(usersList.filter(u => u.username !== usernameToDelete));
+      } else {
+        alert('Erreur lors de la suppression de l\'utilisateur');
+      }
+    } catch (err) {
+      console.error('Erreur lors de la suppression:', err);
+      alert('Erreur de connexion au serveur');
+    }
   };
 
   return (

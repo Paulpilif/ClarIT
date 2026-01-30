@@ -21,19 +21,29 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     // Simulation d'attente (pour l'effet UI)
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Vérification Utilisateurs (LocalStorage)
-    const storedUsersString = localStorage.getItem('clarit_users');
-    const storedUsers = storedUsersString ? JSON.parse(storedUsersString) : [];
-    
-    const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
+    try {
+      // Appel à l'API d'authentification
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
 
-    if (foundUser) {
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de la connexion');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await response.json();
       localStorage.setItem('isAuthenticated', 'true');
-      // On sauvegarde qui est connecté (utile pour l'affichage plus tard)
-      localStorage.setItem('currentUser', username); 
+      localStorage.setItem('currentUser', data.user.username);
       onLogin();
-    } else {
-      setError('Identifiants incorrects.');
+    } catch (err) {
+      setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);
     }
   };

@@ -52,29 +52,29 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
       return;
     }
 
-    // Simulation d'attente
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Appel à l'API d'authentification
+      const response = await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username: username.trim(), password })
+      });
 
-    // Vérifier si l'utilisateur existe déjà
-    const storedUsersString = localStorage.getItem('clarit_users');
-    const storedUsers = storedUsersString ? JSON.parse(storedUsersString) : [];
-    
-    const userExists = storedUsers.find((u: any) => u.username === username);
-    if (userExists) {
-      setError('Ce nom d\'utilisateur existe déjà');
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de la création du compte');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Succès
+    } catch (err) {
+      setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);
       return;
     }
-
-    // Créer le nouvel utilisateur
-    const newUser = {
-      username: username.trim(),
-      password: password,
-      createdAt: new Date().toLocaleDateString('fr-FR')
-    };
-
-    const updatedUsers = [...storedUsers, newUser];
-    localStorage.setItem('clarit_users', JSON.stringify(updatedUsers));
 
     setSuccess('Compte créé avec succès ! Redirection vers la connexion...');
     setUsername('');
