@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ReactFlow, { 
   Background, 
   useNodesState, 
@@ -11,7 +11,7 @@ import "reactflow/dist/style.css";
 import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
-import { Zap, CheckCircle } from "lucide-react";
+import { Zap, CheckCircle, RotateCcw } from "lucide-react";
 import { useScan } from "../contexts/ScanContext";
 
 const nodeTypes = { infra: InfraNode };
@@ -54,16 +54,42 @@ const initialNodes: Node[] = mockHosts.map((h) => {
 
 export default function MapPage() {
   const { setScanCompleted } = useScan();
-  const [scanStarted, setScanStarted] = useState(false);
+  const [scanStarted, setScanStarted] = useState(() => {
+    // Charger le scan depuis localStorage au démarrage
+    const saved = localStorage.getItem('scanCompleted');
+    return saved === 'true';
+  });
   const [isScanning, setIsScanning] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
+
+  // Effet pour masquer le message après 3 secondes
+  useEffect(() => {
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessMessage]);
 
   const handleStartScan = async () => {
     setIsScanning(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setScanStarted(true);
+    setShowSuccessMessage(true);
     setScanCompleted(true);
+    // Persister l'état du scan
+    localStorage.setItem('scanCompleted', 'true');
+    setIsScanning(false);
+  };
+
+  const handleRestartScan = async () => {
+    setShowSuccessMessage(false);
+    setIsScanning(true);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setShowSuccessMessage(true);
     setIsScanning(false);
   };
 
@@ -131,10 +157,12 @@ export default function MapPage() {
         </div>
       ) : (
         <div className="flex flex-col flex-1 gap-4">
-          <div className="p-3 bg-green-100 border border-green-300 rounded-lg flex items-center gap-2 text-green-700 text-sm">
-            <CheckCircle size={18} />
-            Scan terminé - Architecture réseau cartographiée
-          </div>
+          {showSuccessMessage && (
+            <div className="p-3 bg-green-100 border border-green-300 rounded-lg flex items-center gap-2 text-green-700 text-sm animate-in fade-in">
+              <CheckCircle size={18} />
+              Scan terminé - Architecture réseau cartographiée
+            </div>
+          )}
 
           <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
             <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-white border border-[#4A403A] relative shadow-inner">
@@ -159,13 +187,22 @@ export default function MapPage() {
             <div className="w-full lg:w-52 p-4 bg-white rounded-xl border border-[#4A403A] h-fit shadow-lg">
               <h3 className="font-bold mb-4 text-[#2F2F2F]">Légende</h3>
 
-              <div className="grid grid-cols-2 gap-3 text-sm text-[#6B6B6B] lg:flex lg:flex-col">
+              <div className="grid grid-cols-2 gap-3 text-sm text-[#6B6B6B] lg:flex lg:flex-col mb-6">
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"/> Server</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#8B7355] shadow-[0_0_8px_rgba(139,115,85,0.6)]"/> Workstation</div>
               </div>
+
+              <button
+                onClick={handleRestartScan}
+                disabled={isScanning}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                <RotateCcw size={16} />
+                {isScanning ? 'Scan en cours...' : 'Relancer un scan'}
+              </button>
             </div>
           </div>
         </div>
