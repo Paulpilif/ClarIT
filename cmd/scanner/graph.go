@@ -105,11 +105,14 @@ func EnrichGraph(g *NetworkGraph) {
 func ClassifyNode(n *Node) string {
 	ports := map[int]bool{}
 	services := map[string]bool{}
-	hostname := strings.ToLower(n.Hostname)
 
 	for _, s := range n.Services {
 		ports[s.Port] = true
 		services[strings.ToLower(s.Name)] = true
+	}
+
+	if ports[22] && ports[443] && len(n.Services) < 5 {
+		return "firewall"
 	}
 
 	if services["vmware-auth"] || ports[902] || ports[903] {
@@ -120,7 +123,8 @@ func ClassifyNode(n *Node) string {
 		return "network-device"
 	}
 
-	if ports[389] && (ports[88] || ports[445]) {
+	if MayBeDomainController(n.Services) ||
+		(ports[389] && (ports[88] || ports[445])) {
 		return "domain-controller"
 	}
 
@@ -140,7 +144,7 @@ func ClassifyNode(n *Node) string {
 		return "bastion"
 	}
 
-	if strings.Contains(hostname, "pc") || strings.Contains(hostname, "laptop") {
+	if MayBeWorkstation(n) {
 		return "workstation"
 	}
 
