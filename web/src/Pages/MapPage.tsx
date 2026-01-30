@@ -190,7 +190,7 @@ export default function MapPage() {
         const message =
           error instanceof Error ? error.message : "Erreur lors du chargement";
         if (isMounted) {
-          setScanError(message);
+          console.warn(message);
         }
       }
     };
