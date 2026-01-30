@@ -5,6 +5,7 @@ import { UserProvider } from './contexts/UserContext';
 import HomePage from './Pages/HomePage';
 import PricingPage from './Pages/PricingPage';
 import DashboardPage from './Pages/DashboardPage';
+import InventoryPage from './Pages/InventoryPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
 import LoginPage from './Pages/LoginPage';
@@ -49,6 +50,7 @@ export default function App() {
           /* Si connecté, on montre le Layout avec le Dashboard */
           <Route element={<Layout onLogout={handleLogout} />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
