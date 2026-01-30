@@ -44,30 +44,30 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto text-white">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto text-[#E6EDF3]">
       
-      <header className="mb-6 md:mb-8 border-b border-slate-800 pb-4">
+      <header className="mb-6 md:mb-8 border-b border-[#30363D] pb-4">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">Paramètres Admin</h1>
-        <p className="text-slate-400 text-sm md:text-base">Gestion des accès et de la configuration</p>
+        <p className="text-[#8B949E] text-sm md:text-base">Gestion des accès et de la configuration</p>
       </header>
 
       {/* Utilisateur actuel */}
-      <div className="mb-8 bg-[#0f172a] p-5 md:p-6 rounded-xl border border-blue-800/30">
+      <div className="mb-8 bg-[#161B22] p-5 md:p-6 rounded-xl border border-[#30363D]">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold">
+          <div className="w-12 h-12 rounded-full bg-[#1E40AF] flex items-center justify-center text-sm font-bold text-[#E6EDF3]">
             {currentUser?.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <p className="text-slate-400 text-sm">Connecté en tant que</p>
-            <p className="text-xl font-bold text-blue-400">{currentUser}</p>
+            <p className="text-[#8B949E] text-sm">Connecté en tant que</p>
+            <p className="text-xl font-bold text-[#3B82F6]">{currentUser}</p>
           </div>
         </div>
       </div>
 
       {/* Liste des utilisateurs */}
-      <div className="bg-[#0f172a] p-5 md:p-6 rounded-xl border border-slate-800">
+      <div className="bg-[#161B22] p-5 md:p-6 rounded-xl border border-[#30363D]">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500">
+          <div className="p-2 bg-purple-600/20 rounded-lg text-[#8B5CF6]">
             <Users size={24} />
           </div>
           <h2 className="text-xl font-bold">Utilisateurs Actifs</h2>
@@ -76,25 +76,25 @@ export default function SettingsPage() {
         <div className="space-y-3">
           {/* Liste dynamique */}
           {usersList.length === 0 && (
-            <p className="text-slate-500 text-sm italic text-center py-4">Aucun autre utilisateur créé.</p>
+            <p className="text-[#6E7681] text-sm italic text-center py-4">Aucun autre utilisateur créé.</p>
           )}
 
           {usersList.map((user, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-[#1e293b] rounded-lg border border-slate-700 group hover:border-slate-600 transition-colors">
+            <div key={index} className="flex items-center justify-between p-3 bg-[#21262D] rounded-lg border border-[#30363D] group hover:border-[#21262D] transition-colors">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#30363D] flex items-center justify-center text-xs font-bold uppercase shrink-0 text-[#E6EDF3]">
                   {user.username.substring(0, 2)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{user.username}</p>
-                  <p className="text-xs text-slate-500">Créé le {user.createdAt}</p>
+                  <p className="font-medium truncate text-[#E6EDF3]">{user.username}</p>
+                  <p className="text-xs text-[#6E7681]">Créé le {user.createdAt}</p>
                 </div>
               </div>
               
               <button 
                 onClick={() => handleDeleteUser(user.username)}
                 disabled={user.username === currentUser}
-                className="text-slate-500 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed p-2 rounded hover:bg-red-900/20 transition-colors shrink-0 ml-2"
+                className="text-[#6E7681] hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed p-2 rounded hover:bg-red-900/20 transition-colors shrink-0 ml-2"
                 title={user.username === currentUser ? 'Impossible de supprimer votre compte' : 'Supprimer cet utilisateur'}
               >
                 <Trash2 size={18} />
@@ -104,8 +104,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Info supplémentaire */}
-        <div className="mt-6 pt-6 border-t border-slate-800">
-          <p className="text-slate-400 text-sm flex items-center gap-2">
+        <div className="mt-6 pt-6 border-t border-[#30363D]">
+          <p className="text-[#8B949E] text-sm flex items-center gap-2">
             <LogOut size={16} />
             Pour créer un nouveau compte, utilisez la page d'inscription accessible depuis la page de connexion.
           </p>

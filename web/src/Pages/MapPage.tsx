@@ -101,25 +101,25 @@ export default function MapPage() {
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
   return (
-    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col">
+    <div className="h-full w-full bg-[#0F1117] p-4 md:p-6 text-[#E6EDF3] flex flex-col">
       <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
 
       {!scanStarted ? (
         <div className="flex items-center justify-center flex-1">
-          <div className="bg-[#0f172a] p-8 md:p-12 rounded-xl border border-slate-800 text-center max-w-md shadow-lg">
+          <div className="bg-[#161B22] p-8 md:p-12 rounded-xl border border-[#30363D] text-center max-w-md shadow-lg">
             <div className="mb-6">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/20 rounded-full mb-4 ring-1 ring-blue-500/30">
-                <Zap className="w-8 h-8 text-blue-500" />
+                <Zap className="w-8 h-8 text-[#3B82F6]" />
               </div>
             </div>
             <h2 className="text-xl font-bold mb-3">Lancer un scan réseau</h2>
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-[#8B949E] text-sm mb-6">
               Analysez votre infrastructure pour visualiser la cartographie complète de votre réseau.
             </p>
             <button
               onClick={handleStartScan}
               disabled={isScanning}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+              className="w-full bg-[#1E40AF] hover:bg-[#1e3a8a] disabled:bg-blue-800 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
             >
               <Zap size={18} />
               {isScanning ? 'Scan en cours...' : 'Lancer le scan'}
@@ -134,7 +134,7 @@ export default function MapPage() {
           </div>
 
           <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
-            <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
+            <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#161B22] border border-[#30363D] relative shadow-inner">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -146,22 +146,22 @@ export default function MapPage() {
                 fitView
                 panOnScroll={window.innerWidth >= 1024}
               >
-                <Background color="#334155" gap={30} size={1} />
-                <Controls className="bg-slate-800 border-slate-700 fill-white" />
+                <Background color="#30363D" gap={30} size={1} />
+                <Controls className="bg-[#21262D] border-[#30363D] fill-[#E6EDF3]" />
               </ReactFlow>
 
               {hoveredNode && <NodeDetailCard node={hoveredNode} />}
             </div>
 
-            <div className="w-full lg:w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
-              <h3 className="font-bold mb-4 text-slate-200">Légende</h3>
+            <div className="w-full lg:w-52 p-4 bg-[#161B22] rounded-xl border border-[#30363D] h-fit shadow-lg">
+              <h3 className="font-bold mb-4 text-[#E6EDF3]">Légende</h3>
 
-              <div className="grid grid-cols-2 gap-3 text-sm text-slate-400 lg:flex lg:flex-col">
+              <div className="grid grid-cols-2 gap-3 text-sm text-[#8B949E] lg:flex lg:flex-col">
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"/> Server</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-500 shadow-[0_0_8px_rgba(100,116,139,0.6)]"/> Workstation</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#6E7681] shadow-[0_0_8px_rgba(110,126,129,0.6)]"/> Workstation</div>
               </div>
             </div>
           </div>
