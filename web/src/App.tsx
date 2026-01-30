@@ -5,7 +5,8 @@ import MachineDetailPanel from './Components/MachineDetailPanel';
 import DashboardPage from './Pages/DashboardPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
-import LoginPage from './Pages/LoginPage'; // <--- Import du login
+import LoginPage from './Pages/LoginPage';
+import RegisterPage from './Pages/RegisterPage';
 import HostsPage from './Pages/HostsPage'; // <--- Import du login
 
 export default function App() {
@@ -30,10 +31,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Si pas connecté, on montre uniquement le login */}
+        {/* Si pas connecté, on montre uniquement le login et register */}
         {!isAuthenticated ? (
           <>
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         ) : (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Users, Trash2, Save, Shield } from 'lucide-react';
+
+import { UserPlus, Users, Trash2, Save, Shield, LogOut } from 'lucide-react';
 
 export default function SettingsPage() {
   const [newUser, setNewUser] = useState('');
@@ -9,6 +10,7 @@ export default function SettingsPage() {
   
   const [feedback, setFeedback] = useState({ msg: '', type: '' });
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [currentUser] = useState(localStorage.getItem('currentUser'));
 
   useEffect(() => {
     const stored = localStorage.getItem('clarit_users');
@@ -17,10 +19,9 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const handleCreateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUser || !newPass) {
-      setFeedback({ msg: 'Veuillez remplir tous les champs', type: 'error' });
+  const handleDeleteUser = (usernameToDelete: string) => {
+    if (usernameToDelete === currentUser) {
+      alert('Vous ne pouvez pas supprimer votre propre compte');
       return;
     }
 
@@ -58,6 +59,16 @@ export default function SettingsPage() {
         <p className="text-slate-400 text-sm md:text-base">Gestion des accès et de la configuration</p>
       </header>
 
+      {/* Utilisateur actuel */}
+      <div className="mb-8 bg-[#0f172a] p-5 md:p-6 rounded-xl border border-blue-800/30">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold">
+            {currentUser?.substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <p className="text-slate-400 text-sm">Connecté en tant que</p>
+            <p className="text-xl font-bold text-blue-400">{currentUser}</p>
+          </div>
       <div className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2">
         
         {/* --- COLONNE 1 : Créer un utilisateur --- */}
@@ -117,16 +128,22 @@ export default function SettingsPage() {
             </button>
           </form>
         </div>
+      </div>
 
-        {/* --- COLONNE 2 : Liste des utilisateurs --- */}
-        <div className="bg-[#0f172a] p-5 md:p-6 rounded-xl border border-slate-800">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500">
-              <Users size={24} />
-            </div>
-            <h2 className="text-xl font-bold">Utilisateurs Actifs</h2>
+      {/* Liste des utilisateurs */}
+      <div className="bg-[#0f172a] p-5 md:p-6 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-purple-600/20 rounded-lg text-purple-500">
+            <Users size={24} />
           </div>
+          <h2 className="text-xl font-bold">Utilisateurs Actifs</h2>
+        </div>
 
+        <div className="space-y-3">
+          {/* Liste dynamique */}
+          {usersList.length === 0 && (
+            <p className="text-slate-500 text-sm italic text-center py-4">Aucun autre utilisateur créé.</p>
+          )}
           <div className="space-y-3">
             {/* Admin Fixe */}
             <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-800/50">
@@ -147,16 +164,15 @@ export default function SettingsPage() {
               <p className="text-slate-500 text-sm italic text-center py-4">Aucun autre utilisateur.</p>
             )}
 
-            {usersList.map((user, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-[#1e293b] rounded-lg border border-slate-700 group">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold uppercase shrink-0">
-                    {user.username.substring(0, 2)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{user.username}</p>
-                    <p className="text-xs text-slate-500">{user.createdAt}</p>
-                  </div>
+          {usersList.map((user, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-[#1e293b] rounded-lg border border-slate-700 group hover:border-slate-600 transition-colors">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                  {user.username.substring(0, 2)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{user.username}</p>
+                  <p className="text-xs text-slate-500">Créé le {user.createdAt}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -178,10 +194,26 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+              
+              <button 
+                onClick={() => handleDeleteUser(user.username)}
+                disabled={user.username === currentUser}
+                className="text-slate-500 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed p-2 rounded hover:bg-red-900/20 transition-colors shrink-0 ml-2"
+                title={user.username === currentUser ? 'Impossible de supprimer votre compte' : 'Supprimer cet utilisateur'}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
         </div>
 
+        {/* Info supplémentaire */}
+        <div className="mt-6 pt-6 border-t border-slate-800">
+          <p className="text-slate-400 text-sm flex items-center gap-2">
+            <LogOut size={16} />
+            Pour créer un nouveau compte, utilisez la page d'inscription accessible depuis la page de connexion.
+          </p>
+        </div>
       </div>
     </div>
   );
