@@ -1,0 +1,63 @@
+{
+  "nodes": [
+    {
+      "id": "192-168-1-25",
+      "ip": "192.168.1.25",
+      "hostname": "air-de-paul.home",
+      "type": "pc",
+      "risk": "ok"
+    },
+    {
+      "id": "10-211-55-1",
+      "ip": "10.211.55.1",
+      "hostname": "",
+      "type": "server",
+      "risk": "ok"
+    },
+    {
+      "id": "10-211-55-6",
+      "ip": "10.211.55.6",
+      "hostname": "ubuntu.shared",
+      "type": "server",
+      "risk": "ok"
+    },
+    {
+      "id": "10-211-55-7",
+      "ip": "10.211.55.7",
+      "hostname": "kali.shared",
+      "type": "server",
+      "risk": "ok"
+    },
+    {
+      "id": "10-211-55-2",
+      "ip": "10.211.55.2",
+      "hostname": "",
+      "type": "server",
+      "services": [
+        {
+          "port": 5000,
+          "protocol": "tcp",
+          "name": "rtsp"
+        },
+        {
+          "port": 7000,
+          "protocol": "tcp",
+          "name": "rtsp"
+        }
+      ],
+      "risk": "ok"
+    }
+  ],
+  "links": [
+    {
+      "source": "192-168-1-25",
+      "target": "10-211-55-2",
+      "type": "rtsp"
+    },
+    {
+      "source": "192-168-1-25",
+      "target": "10-211-55-2",
+      "type": "rtsp"
+    }
+  ]
+}

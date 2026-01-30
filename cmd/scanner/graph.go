@@ -194,7 +194,7 @@ func saveGraphJSON(path string, g *NetworkGraph) error {
 }
 
 func NextGraphFilename() string {
-	files, _ := filepath.Glob("network_graph_*.json")
+	files, _ := filepath.Glob("results/network_graph_*.json")
 	max := 0
 
 	for _, f := range files {
@@ -204,7 +204,7 @@ func NextGraphFilename() string {
 			max = n
 		}
 	}
-	return "network_graph_" + strconv.Itoa(max+1) + ".json"
+	return "results/network_graph_" + strconv.Itoa(max+1) + ".json"
 }
 
 func getLocalIP() string {
