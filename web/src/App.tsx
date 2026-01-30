@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Components/Layout';
+import HomePage from './Pages/HomePage';
 import DashboardPage from './Pages/DashboardPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
@@ -30,12 +31,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Si pas connecté, on montre uniquement le login et register */}
+        {/* Page d'accueil publique */}
+        <Route path="/" element={<HomePage />} />
+        
+        {/* Si pas connecté, on montre login et register */}
         {!isAuthenticated ? (
           <>
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
           /* Si connecté, on montre le Layout avec le Dashboard */
