@@ -53,18 +53,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-3">
-          {/* Admin Fixe */}
-          <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold shrink-0">AD</div>
-              <div className="min-w-0">
-                <p className="font-medium truncate">ClarIT</p>
-                <p className="text-xs text-slate-500">Root</p>
-              </div>
-            </div>
-            <span className="text-xs bg-blue-900/30 text-blue-400 px-2 py-1 rounded shrink-0">Admin</span>
-          </div>
-
           {/* Liste dynamique */}
           {usersList.length === 0 && (
             <p className="text-slate-500 text-sm italic text-center py-4">Aucun autre utilisateur créé.</p>

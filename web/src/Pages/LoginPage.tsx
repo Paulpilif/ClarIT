@@ -21,16 +21,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     // Simulation d'attente (pour l'effet UI)
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // 1. Vérification Admin (En dur)
-    const isAdmin = (username === 'ClarIT' && password === 'myefrei');
-
-    // 2. Vérification Utilisateurs (LocalStorage)
+    // Vérification Utilisateurs (LocalStorage)
     const storedUsersString = localStorage.getItem('clarit_users');
     const storedUsers = storedUsersString ? JSON.parse(storedUsersString) : [];
     
     const foundUser = storedUsers.find((u: any) => u.username === username && u.password === password);
 
-    if (isAdmin || foundUser) {
+    if (foundUser) {
       localStorage.setItem('isAuthenticated', 'true');
       // On sauvegarde qui est connecté (utile pour l'affichage plus tard)
       localStorage.setItem('currentUser', username); 
