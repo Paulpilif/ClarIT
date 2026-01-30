@@ -46,8 +46,6 @@ func BuildGraph(fps []*HostFingerprint) NetworkGraph {
 		Links: []Link{},
 	}
 
-	linkSet := map[string]struct{}{}
-
 	scannerIP := getLocalIP()
 	scannerHostname, _ := os.Hostname()
 	scannerID := generateID(scannerIP)
@@ -73,11 +71,6 @@ func BuildGraph(fps []*HostFingerprint) NetworkGraph {
 		})
 
 		for _, s := range fp.Services {
-			linkKey := buildLinkKey(scannerID, id, s.Name)
-			if _, exists := linkSet[linkKey]; exists {
-				continue
-			}
-			linkSet[linkKey] = struct{}{}
 			graph.Links = append(graph.Links, Link{
 				Source: scannerID,
 				Target: id,
@@ -111,14 +104,13 @@ func EnrichGraph(g *NetworkGraph) {
 
 // Petite base de donnée locale d'obsolescence / vulnérabilités
 var vulnDB = map[string][]string{ 
-	"apache":  {"2.2", "2.4.0", "2.4.1"},
-	"openssh": {"7.2", "7.4"},
-	"mysql":   {"5.5", "5.6"},
+	"Apache": {"2.2", "2.4.0", "2.4.1"},
+	"OpenSSH": {"7.2", "7.4"},
+	"MySQL": {"5.5", "5.6"},
 }
 
 func isVulnerable(name, version string) bool {
-	key := normalizeServiceName(name)
-	for _, v := range vulnDB[key] {
+	for _, v := range vulnDB[name] {
 		if strings.HasPrefix(version, v) {
 			return true
 		}
@@ -134,15 +126,10 @@ func isObsolete(_, version string) bool {
 
 // Génère un ID stable par IP
 func generateID(ip string) string {
-	return "ip:" + strings.NewReplacer(".", "-", ":", "-").Replace(ip)
+	return strings.ReplaceAll(ip, ".", "-")
 }
 
 func saveGraphJSON(path string, g *NetworkGraph) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -183,13 +170,5 @@ func getLocalIP() string {
         }
     }
     return "127.0.0.1"
-}
-
-func normalizeServiceName(name string) string {
-	return strings.ToLower(strings.TrimSpace(name))
-}
-
-func buildLinkKey(source, target, serviceName string) string {
-	return source + "|" + target + "|" + normalizeServiceName(serviceName)
 }
 
