@@ -206,13 +206,22 @@ export default function MapPage() {
     setIsScanning(true);
     setScanError(null);
 
+    const apiToken = localStorage.getItem("apiToken");
+    const payload: Record<string, unknown> = {
+      cidr: DEFAULT_CIDR,
+      save: true,
+    };
+    if (apiToken) {
+      payload.api_token = apiToken;
+    }
+
     try {
       const response = await fetch(`${SCANNER_BASE_URL}/scan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ cidr: DEFAULT_CIDR, save: true }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

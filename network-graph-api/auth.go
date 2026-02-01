@@ -27,6 +27,10 @@ type createUserRequest struct {
 	Password string `json:"password"`
 }
 
+type addPremiumTokenRequest struct {
+	APIToken string `json:"api_token"`
+}
+
 func initAuthDB() {
 	host := getEnvOrDefault("AUTH_DB_HOST", "auth-db")
 	port := getEnvOrDefault("AUTH_DB_PORT", "5432")
@@ -164,6 +168,32 @@ func createUserHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+func addPremiumTokenHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req addPremiumTokenRequest
+		if err := c.ShouldBindJSON(&req); err != nil || req.APIToken == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing_api_token"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		_, err := db.ExecContext(ctx, "INSERT INTO premium_whitelist (valid_token) VALUES ($1)", req.APIToken)
+		if err != nil {
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+				c.JSON(http.StatusConflict, gin.H{"error": "token_exists"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database_error"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"status": "added"})
+	}
+}
+
 func healthHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -223,4 +253,36 @@ func ensureAuthSchema(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func isPremiumToken(ctx context.Context, db *sql.DB, token string) (bool, error) {
+	if db == nil || token == "" {
+		return false, nil
+	}
+
+	var exists int
+	if err := db.QueryRowContext(ctx, "SELECT 1 FROM premium_whitelist WHERE valid_token = $1", token).Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func getCompanyNameByToken(ctx context.Context, db *sql.DB, token string) (string, error) {
+	if db == nil || token == "" {
+		return "", nil
+	}
+
+	var companyName string
+	if err := db.QueryRowContext(ctx, "SELECT company_name FROM companies WHERE api_token = $1", token).Scan(&companyName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return companyName, nil
 }

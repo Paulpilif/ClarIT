@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,8 +14,9 @@ import (
 )
 
 type scanRequest struct {
-	CIDR string `json:"cidr"`
-	Save bool   `json:"save,omitempty"`
+	CIDR     string `json:"cidr"`
+	Save     bool   `json:"save,omitempty"`
+	APIToken string `json:"api_token,omitempty"`
 }
 
 type scanResponse struct {
@@ -67,6 +71,12 @@ func startServer(listenAddr string, timeout time.Duration) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if save && req.APIToken != "" {
+			if err := ingestGraph(ctx, graph, req.APIToken); err != nil {
+				log.Printf("ingest failed: %v", err)
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -137,4 +147,40 @@ func printGraphJSON(w *os.File, g *NetworkGraph) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(g)
+}
+
+func ingestGraph(ctx context.Context, graph NetworkGraph, apiToken string) error {
+	ingestURL := getEnvOrDefault("GRAPH_INGEST_URL", "http://localhost:8080/api/v1/ingest")
+	payload, err := json.Marshal(graph)
+	if err != nil {
+		return fmt.Errorf("marshal graph: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ingestURL, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Token", apiToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ingest failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	return nil
+}
+
+func getEnvOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
 }
