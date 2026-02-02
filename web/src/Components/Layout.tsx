@@ -76,8 +76,8 @@ export default function Layout({ onLogout }: LayoutProps) {
             </NavLink>
           )}
 
-          {/* Dashboard - Accessible Amiral uniquement */}
-          {hasAccess('dashboard') && (
+          {/* Dashboard - Accessible à tous après un scan */}
+          {hasAccess('dashboard', scanCompleted) && (
             <NavLink 
               to="/dashboard" 
               onClick={closeMobileMenu}

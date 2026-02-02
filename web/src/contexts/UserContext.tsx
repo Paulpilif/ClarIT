@@ -6,7 +6,7 @@ export type UserTier = 'scout' | 'navigator' | 'admiral';
 interface UserContextType {
   tier: UserTier;
   setTier: (tier: UserTier) => void;
-  hasAccess: (feature: string) => boolean;
+  hasAccess: (feature: string, scanCompleted?: boolean) => boolean;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -19,7 +19,12 @@ export function UserProvider({ children }: UserProviderProps) {
   // Mock: Change this to test different tiers
   const [tier, setTier] = useState<UserTier>('admiral');
 
-  const hasAccess = (feature: string): boolean => {
+  const hasAccess = (feature: string, scanCompleted: boolean = false): boolean => {
+    // Dashboard accessible à tous après un scan
+    if (feature === 'dashboard' && scanCompleted) {
+      return true;
+    }
+
     const features: Record<UserTier, string[]> = {
       scout: [
         'map', // Cartographie
