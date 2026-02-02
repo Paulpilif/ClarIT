@@ -1,0 +1,196 @@
+import { useState } from "react";
+import { UserPlus, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface RegisterPageProps {
+  onRegisterSuccess?: () => void;
+}
+
+export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsSubmitting(true);
+
+    // Validations
+    if (!username.trim()) {
+      setError("Veuillez entrer un nom d'utilisateur");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (username.length < 3) {
+      setError("Le nom d'utilisateur doit contenir au moins 3 caractères");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!password) {
+      setError("Veuillez entrer un mot de passe");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Appel à l'API d'authentification
+      const response = await fetch(`${apiBaseUrl}/api/v1/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || "Erreur lors de la création du compte");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Succès
+    } catch (err) {
+      setError(
+        "Erreur de connexion au serveur. Assurez-vous que le serveur d'authentification est démarré.",
+      );
+      setIsSubmitting(false);
+    }
+
+    setSuccess("Compte créé avec succès ! Redirection vers la connexion...");
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+
+    // Rediriger vers la page de login après 2 secondes
+    setTimeout(() => {
+      navigate("/login");
+      if (onRegisterSuccess) onRegisterSuccess();
+    }, 2000);
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        width: "100vw",
+        backgroundColor: "#0F1117",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 50,
+      }}
+    >
+      <div className="w-full max-w-md bg-[#161B22] rounded-2xl shadow-2xl border border-[#30363D] p-8 m-4">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-900/20 rounded-full mb-4 ring-1 ring-emerald-500/30">
+            <UserPlus className="w-8 h-8 text-[#059669]" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#E6EDF3]">Créer un compte</h1>
+          <p className="text-[#8B949E] text-sm mt-2">
+            Inscrivez-vous pour accéder à ClarIT
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
+              Nom d'utilisateur
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              placeholder="Ex: john_doe"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
+              Confirmer le mot de passe
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <div className="text-red-400 text-sm text-center bg-red-900/20 py-3 rounded border border-red-900/30">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="text-emerald-400 text-sm text-center bg-emerald-900/20 py-3 rounded border border-emerald-900/30">
+              {success}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-[#059669] hover:bg-[#047857] disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20"
+          >
+            {isSubmitting ? "Création..." : "S'inscrire"}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-6 border-t border-[#30363D]">
+          <button
+            onClick={() => navigate("/login")}
+            className="w-full flex items-center justify-center gap-2 text-[#8B949E] hover:text-[#E6EDF3] transition-colors text-sm"
+          >
+            <ArrowLeft size={16} />
+            Retour à la connexion
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

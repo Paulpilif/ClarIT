@@ -1,18 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type scanRequest struct {
-	CIDR string `json:"cidr"`
-	Save bool   `json:"save,omitempty"`
+	CIDR     string `json:"cidr"`
+	Save     bool   `json:"save,omitempty"`
+	Company  string `json:"company,omitempty"`
+	APIToken string `json:"api_token,omitempty"`
 }
 
 type scanResponse struct {
@@ -20,9 +27,36 @@ type scanResponse struct {
 	Filename string       `json:"filename,omitempty"`
 }
 
+type batchScanRequest struct {
+	CIDRs    []string `json:"cidrs"`
+	Save     bool     `json:"save,omitempty"`
+	Company  string   `json:"company,omitempty"`
+	APIToken string   `json:"api_token,omitempty"`
+}
+
+type batchScanItem struct {
+	CIDR     string       `json:"cidr"`
+	Graph    NetworkGraph `json:"graph,omitempty"`
+	Filename string       `json:"filename,omitempty"`
+	Error    string       `json:"error,omitempty"`
+}
+
+type batchScanResponse struct {
+	Items []batchScanItem `json:"items"`
+}
+
 func startServer(listenAddr string, timeout time.Duration) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/scan", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		if r.Method != http.MethodPost && r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
@@ -39,12 +73,16 @@ func startServer(listenAddr string, timeout time.Duration) {
 			req.CIDR = r.URL.Query().Get("cidr")
 		}
 
+		if req.Company == "" {
+			req.Company = r.URL.Query().Get("company")
+		}
+
 		save := req.Save
 		if saveParam := r.URL.Query().Get("save"); saveParam != "" {
 			save = strings.EqualFold(saveParam, "true") || saveParam == "1"
 		}
 
-		log.Printf("/scan request: method=%s url=%s cidr=%q save=%v", r.Method, r.URL.String(), req.CIDR, save)
+		log.Printf("/scan request: method=%s url=%s cidr=%q company=%q save=%v", r.Method, r.URL.String(), req.CIDR, req.Company, save)
 
 		if req.CIDR == "" {
 			http.Error(w, "missing cidr", http.StatusBadRequest)
@@ -54,10 +92,16 @@ func startServer(listenAddr string, timeout time.Duration) {
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
-		graph, filename, err := runScan(ctx, req.CIDR, save)
+		graph, filename, err := runScan(ctx, req.CIDR, save, req.Company)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if save && req.APIToken != "" {
+			if err := ingestGraph(ctx, graph, req.APIToken); err != nil {
+				log.Printf("ingest failed: %v", err)
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -68,7 +112,84 @@ func startServer(listenAddr string, timeout time.Duration) {
 		}
 	})
 
+	mux.HandleFunc("/scan-batch", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		req := batchScanRequest{}
+		if r.Body != nil {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, "invalid JSON body", http.StatusBadRequest)
+				return
+			}
+		}
+
+		if len(req.CIDRs) == 0 {
+			http.Error(w, "missing cidrs", http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("/scan-batch request: count=%d company=%q save=%v", len(req.CIDRs), req.Company, req.Save)
+
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+
+		items := make([]batchScanItem, len(req.CIDRs))
+		for i, cidr := range req.CIDRs {
+			items[i] = batchScanItem{CIDR: cidr}
+		}
+
+		maxConcurrentScans := getEnvIntOrDefault("SCAN_MAX_CONCURRENT", 5)
+		if maxConcurrentScans < 1 {
+			maxConcurrentScans = 1
+		}
+		sem := make(chan struct{}, maxConcurrentScans)
+		var wg sync.WaitGroup
+		for i := range items {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				cidr := items[idx].CIDR
+				graph, filename, err := runScan(ctx, cidr, req.Save, req.Company)
+				if err != nil {
+					items[idx].Error = err.Error()
+					return
+				}
+				if req.Save && req.APIToken != "" {
+					if err := ingestGraph(ctx, graph, req.APIToken); err != nil {
+						log.Printf("ingest failed for %s: %v", cidr, err)
+					}
+				}
+				items[idx].Graph = graph
+				items[idx].Filename = filename
+			}(i)
+		}
+		wg.Wait()
+
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(batchScanResponse{Items: items}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
@@ -85,7 +206,7 @@ func startServer(listenAddr string, timeout time.Duration) {
 	}
 }
 
-func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string, error) {
+func runScan(ctx context.Context, cidr string, save bool, companyName string) (NetworkGraph, string, error) {
 	hosts, err := DiscoverHosts(ctx, cidr)
 	if err != nil {
 		return NetworkGraph{}, "", err
@@ -122,7 +243,11 @@ func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string,
 
 	filename := ""
 	if save {
-		filename = NextGraphFilename()
+		var err error
+		filename, err = GraphFilename(companyName, cidr)
+		if err != nil {
+			return NetworkGraph{}, "", err
+		}
 		if err := saveGraphJSON(filename, &graph); err != nil {
 			return NetworkGraph{}, "", err
 		}
@@ -135,4 +260,52 @@ func printGraphJSON(w *os.File, g *NetworkGraph) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(g)
+}
+
+func ingestGraph(ctx context.Context, graph NetworkGraph, apiToken string) error {
+	ingestURL := getEnvOrDefault("GRAPH_INGEST_URL", "http://localhost:8080/api/v1/ingest")
+	payload, err := json.Marshal(graph)
+	if err != nil {
+		return fmt.Errorf("marshal graph: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ingestURL, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Token", apiToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ingest failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	return nil
+}
+
+func getEnvOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func getEnvIntOrDefault(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }

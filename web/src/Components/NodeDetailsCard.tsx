@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Monitor, Server, Shield, Database, Activity, Terminal } from 'lucide-react';
 
 interface NodeDetailCardProps {

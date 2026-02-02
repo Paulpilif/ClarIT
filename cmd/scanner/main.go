@@ -11,6 +11,7 @@ import (
 
 func main() {
 	cidrFlag := flag.String("cidr", "", "CIDR à scanner (ex: 10.211.55.0/24)")
+	companyFlag := flag.String("company", "", "Nom de l'entreprise (utilisé pour le dossier de résultats)")
 	serverFlag := flag.Bool("server", false, "Lancer le serveur HTTP")
 	listenFlag := flag.String("listen", ":8090", "Adresse d'écoute du serveur HTTP")
 	timeoutFlag := flag.Duration("timeout", 5*time.Minute, "Timeout du scan")
@@ -38,7 +39,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeoutFlag)
 	defer cancel()
 
-	graph, filename, err := runScan(ctx, cidr, *saveFlag)
+	graph, filename, err := runScan(ctx, cidr, *saveFlag, *companyFlag)
 	if err != nil {
 		log.Fatal(err)
 	}

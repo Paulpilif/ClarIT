@@ -26,6 +26,7 @@ go.work
 
 ### Linux ###
 *~
+cmd/scanner/results/
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -46,7 +47,8 @@ go.work
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*

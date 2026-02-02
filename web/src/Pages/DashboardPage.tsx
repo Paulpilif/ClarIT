@@ -1,87 +1,275 @@
-import { Server, ShieldAlert, Activity, Cpu } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { TrendingUp, AlertTriangle, Ship } from "lucide-react";
+import { useAppStore } from "../contexts/AppStore";
+import DataSyncEmptyState from "../Components/DataSyncEmptyState";
+import PaywallUpgrade from "../Components/PaywallUpgrade";
+
+const GRAPH_JSON_URL = import.meta.env.VITE_GRAPH_JSON_URL || "";
+const GRAPH_API_BASE_URL =
+  import.meta.env.VITE_GRAPH_API_URL || "http://localhost:8080/api/v1";
+
+type GraphNode = {
+  id: string;
+  created_at?: number;
+  last_seen?: number;
+};
+
+type NetworkGraph = {
+  nodes: GraphNode[];
+};
 
 export default function DashboardPage() {
+  const { subscription_tier, scan_data_status } = useAppStore();
+  const [kpis, setKpis] = useState({
+    totalMachines: 0,
+    createdLast30Days: 0,
+    missingLast30Days: 0,
+  });
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const resolveGraphUrl = useMemo(() => {
+    if (GRAPH_JSON_URL) return GRAPH_JSON_URL;
+    const companyName = localStorage.getItem("currentUser");
+    if (companyName) {
+      return `${GRAPH_API_BASE_URL}/graph/company/${encodeURIComponent(companyName)}`;
+    }
+    return `${GRAPH_API_BASE_URL}/graph`;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const toMillis = (value?: number) => {
+      if (!value) return undefined;
+      return value > 1_000_000_000_000 ? value : value * 1000;
+    };
+
+    const loadGraph = async () => {
+      if (scan_data_status !== "valid") {
+        setKpis({
+          totalMachines: 0,
+          createdLast30Days: 0,
+          missingLast30Days: 0,
+        });
+        setLoadError(null);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const response = await fetch(resolveGraphUrl);
+        if (!response.ok) {
+          throw new Error(`Graph fetch failed: ${response.status}`);
+        }
+        const graphData = (await response.json()) as NetworkGraph;
+        const now = Date.now();
+        const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+        const totalMachines = graphData.nodes.length;
+        const createdLast30Days = graphData.nodes.filter((node) => {
+          const created = toMillis(node.created_at);
+          return created !== undefined && created >= thirtyDaysAgo;
+        }).length;
+        const missingLast30Days = graphData.nodes.filter((node) => {
+          const lastSeen =
+            toMillis(node.last_seen) ?? toMillis(node.created_at);
+          return lastSeen !== undefined && lastSeen < thirtyDaysAgo;
+        }).length;
+
+        if (!cancelled) {
+          setKpis({ totalMachines, createdLast30Days, missingLast30Days });
+        }
+      } catch (error) {
+        console.error("Dashboard load error:", error);
+        if (!cancelled) {
+          setLoadError(
+            "Impossible de charger le tableau de bord. Vérifiez que l'API est démarrée.",
+          );
+          setKpis({
+            totalMachines: 0,
+            createdLast30Days: 0,
+            missingLast30Days: 0,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadGraph();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveGraphUrl, scan_data_status]);
+
+  if (subscription_tier === "eclaireur") {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
+            Tableau de Bord
+          </h1>
+          <p className="text-[#6E7681] text-lg">
+            Vue d'ensemble de votre flotte
+          </p>
+        </header>
+        <PaywallUpgrade
+          title="Tableau de Bord réservé au plan Navigateur"
+          description="Passez au plan Navigateur pour accéder aux indicateurs avancés."
+        />
+      </div>
+    );
+  }
+
+  // Si données non synchronisées, afficher l'empty state
+  if (scan_data_status !== "valid") {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
+            Tableau de Bord
+          </h1>
+          <p className="text-[#6E7681] text-lg">
+            Vue d'ensemble de votre flotte
+          </p>
+        </header>
+        <DataSyncEmptyState
+          title="Données non synchronisées"
+          description="Veuillez lancer un scan pour accéder au tableau de bord."
+        />
+      </div>
+    );
+  }
+
   return (
-    // CHANGEMENT 1 : p-4 sur mobile, md:p-8 sur PC.
-    // Cela évite que le contenu soit trop compressé sur petit écran.
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      
-      <header className="mb-6 md:mb-8">
-        {/* CHANGEMENT 2 : Taille du texte adaptative (2xl sur mobile, 3xl sur PC) */}
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          Vue d'ensemble
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
+          Tableau de Bord
         </h1>
-        <p className="text-slate-400 text-sm md:text-base">
-          État du réseau en temps réel
+        <p className="text-[#6E7681] text-lg">
+          Vue d'ensemble de votre flotte réseau
         </p>
       </header>
 
-      {/* Cartes de Stats (Widgets) 
-         - grid-cols-1 : 1 carte par ligne sur Mobile
-         - md:grid-cols-2 : 2 cartes par ligne sur Tablette
-         - lg:grid-cols-4 : 4 cartes par ligne sur PC
-      */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-        <StatCard 
-          title="Total Machines" 
-          value="12" 
-          icon={<Server size={24} className="text-blue-500" />} 
-          trend="+2 cette semaine"
-        />
-        <StatCard 
-          title="Alertes Actives" 
-          value="0" 
-          icon={<ShieldAlert size={24} className="text-emerald-500" />} 
-          trend="Système sain"
-          isGood
-        />
-        <StatCard 
-          title="Bande Passante" 
-          value="1.2 Gb/s" 
-          icon={<Activity size={24} className="text-purple-500" />} 
-          trend="Stable"
-        />
-        <StatCard 
-          title="Charge CPU Moy." 
-          value="34%" 
-          icon={<Cpu size={24} className="text-orange-500" />} 
-          trend="Pic à 45%"
-        />
+      {loadError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mb-6 rounded-lg border border-[#2F2F2F]/10 bg-[#FAF0E6]/40 px-4 py-3 text-[#6E7681]">
+          Chargement du tableau de bord...
+        </div>
+      )}
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Nouveaux Horizons */}
+        <div className="bg-[#FAF0E6] border-2 border-[#2F2F2F] rounded-xl p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-[#4A403A] text-sm font-semibold uppercase tracking-wide">
+                Nouveaux Horizons
+              </p>
+              <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
+                {kpis.createdLast30Days}
+              </h2>
+              <p className="text-[#6E7681] text-sm mt-2">
+                Machines créées sur 30 jours
+              </p>
+            </div>
+            <div className="p-3 bg-[#2F2F2F] rounded-lg">
+              <TrendingUp size={24} className="text-[#FAF0E6]" />
+            </div>
+          </div>
+          <div className="pt-4 border-t border-[#2F2F2F]/20">
+            <p className="text-[#6E7681] text-sm font-medium">
+              Basé sur l'inventaire réel
+            </p>
+          </div>
+        </div>
+
+        {/* Vaisseaux Fantômes */}
+        <div className="bg-[#FAF0E6] border-2 border-[#2F2F2F] rounded-xl p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-[#4A403A] text-sm font-semibold uppercase tracking-wide">
+                Vaisseaux Fantômes
+              </p>
+              <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
+                {kpis.missingLast30Days}
+              </h2>
+              <p className="text-[#6E7681] text-sm mt-2">
+                Non vues depuis 30 jours
+              </p>
+            </div>
+            <div className="p-3 bg-[#2F2F2F] rounded-lg">
+              <AlertTriangle size={24} className="text-[#FAF0E6]" />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#2F2F2F]/20">
+            <p className="text-[#6E7681] text-sm font-medium">
+              À surveiller étroitement
+            </p>
+          </div>
+        </div>
+
+        {/* Flotte Totale */}
+        <div className="bg-[#FAF0E6] border-2 border-[#2F2F2F] rounded-xl p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-[#4A403A] text-sm font-semibold uppercase tracking-wide">
+                Flotte Totale
+              </p>
+              <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
+                {kpis.totalMachines}
+              </h2>
+              <p className="text-[#6E7681] text-sm mt-2">Machines détectées</p>
+            </div>
+            <div className="p-3 bg-[#2F2F2F] rounded-lg">
+              <Ship size={24} className="text-[#FAF0E6]" />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#2F2F2F]/20">
+            <p className="text-[#6E7681] text-sm font-medium">
+              État sain de la flotte
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Zone Graphique */}
-      <div className="bg-[#0f172a] rounded-xl border border-slate-800 p-4 md:p-6 h-96 flex flex-col items-center justify-center text-slate-500 relative overflow-hidden group">
-        
-        {/* Un petit effet visuel pour simuler un graphique responsive */}
-        <div className="flex items-end gap-2 h-32 mb-4 opacity-50">
-           {[40, 70, 45, 90, 60, 80, 50].map((h, i) => (
-             <div key={i} className="w-4 md:w-8 bg-blue-600/20 rounded-t-sm transition-all duration-500 group-hover:bg-blue-600/40" style={{ height: `${h}%` }}></div>
-           ))}
-        </div>
-        
-        <p>Graphique d'activité réseau (À venir...)</p>
+      {/* Additional Info */}
+      <div className="bg-white border-2 border-[#2F2F2F] rounded-xl p-6">
+        <h3 className="text-lg font-bold text-[#2F2F2F] mb-4">
+          À propos de ce tableau de bord
+        </h3>
+        <p className="text-[#6E7681] mb-3">
+          Ce dashboard fournit une vue stratégique de votre flotte réseau:
+        </p>
+        <ul className="space-y-2 text-[#6E7681]">
+          <li>
+            • <strong>Nouveaux Horizons</strong>: Suivez les nouvelles machines
+            ajoutées à votre infrastructure
+          </li>
+          <li>
+            • <strong>Vaisseaux Fantômes</strong>: Identifiez les machines qui
+            n'ont pas été vues depuis plus d'un mois
+          </li>
+          <li>
+            • <strong>Flotte Totale</strong>: Vue instantanée du nombre total de
+            machines actives
+          </li>
+        </ul>
       </div>
-    </div>
-  );
-}
-
-// Composant interne StatCard
-// J'ai ajouté 'min-w-0' pour éviter que le texte ne déborde sur les très petits écrans
-function StatCard({ title, value, icon, trend, isGood }: any) {
-  return (
-    <div className="bg-[#0f172a] p-5 md:p-6 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors shadow-sm">
-      <div className="flex justify-between items-start mb-4">
-        <div className="min-w-0">
-          <p className="text-slate-400 text-sm font-medium mb-1 truncate">{title}</p>
-          <h3 className="text-2xl font-bold text-white">{value}</h3>
-        </div>
-        <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 shrink-0">
-          {icon}
-        </div>
-      </div>
-      <p className={`text-xs ${isGood ? 'text-emerald-400' : 'text-slate-500'} flex items-center gap-1`}>
-        {trend}
-      </p>
     </div>
   );
 }
