@@ -207,13 +207,24 @@ func GraphFilename(companyName string, cidr string) (string, error) {
 		cidrSegment = "unknown"
 	}
 
-	dir := filepath.Join("results", companySegment)
+	baseDir := getResultsBaseDir()
+	dir := filepath.Join(baseDir, companySegment)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
 
 	filename := "scan_" + cidrSegment + ".json"
 	return filepath.Join(dir, filename), nil
+}
+
+func getResultsBaseDir() string {
+	if value := strings.TrimSpace(os.Getenv("SCANNER_RESULTS_DIR")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("RESULTS_DIR")); value != "" {
+		return value
+	}
+	return "results"
 }
 
 func sanitizePathSegment(input string) string {
