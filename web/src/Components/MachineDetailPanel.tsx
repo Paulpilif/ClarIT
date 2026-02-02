@@ -62,6 +62,7 @@ export default function MachineDetailPanel({ node, onClose }: MachineDetailPanel
         <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
             machine.status === 'online' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
             machine.status === 'warning' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+            machine.status === 'missing' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
             'bg-red-500/10 text-red-400 border-red-500/20'
         }`}>
             {machine.status}

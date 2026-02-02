@@ -44,7 +44,7 @@ type InventoryHost = {
   ip: string;
   firstSeen: string;
   lastSeen: string;
-  status: "online" | "offline";
+  status: "online" | "offline" | "missing";
   ports: number[];
   services: string[];
   created_at: string;
@@ -76,7 +76,11 @@ function mapGraphToInventory(graph: NetworkGraph): InventoryHost[] {
     ) as number[];
     const statusValue = node.status?.toLowerCase() || node.risk?.toLowerCase();
     const status: InventoryHost["status"] =
-      statusValue === "online" || statusValue === "up" ? "online" : "offline";
+      statusValue === "online" || statusValue === "up"
+        ? "online"
+        : statusValue === "missing"
+          ? "missing"
+          : "offline";
     const createdAtIso = toIsoFromTimestamp(node.created_at);
     const lastSeenIso = node.last_seen
       ? toIsoFromTimestamp(node.last_seen)
@@ -329,12 +333,16 @@ export default function InventoryPage() {
                         className={`inline-block px-3 py-1 rounded-full font-medium text-sm ${
                           host.status === "online"
                             ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            : host.status === "missing"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
                         }`}
                       >
                         {host.status === "online"
                           ? "✓ En ligne"
-                          : "✗ Hors ligne"}
+                          : host.status === "missing"
+                            ? "⚠ Manquante"
+                            : "✗ Hors ligne"}
                       </span>
                     </td>
                   </tr>
@@ -344,7 +352,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Summary */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-[#FAF0E6] border-2 border-[#2F2F2F] rounded-xl p-6">
               <p className="text-[#4A403A] text-sm font-semibold uppercase">
                 Total des Machines
@@ -369,6 +377,15 @@ export default function InventoryPage() {
               </p>
               <p className="text-3xl font-bold text-[#2F2F2F] mt-2">
                 {inventoryHosts.filter((h) => h.status === "offline").length}
+              </p>
+            </div>
+
+            <div className="bg-[#FAF0E6] border-2 border-[#2F2F2F] rounded-xl p-6">
+              <p className="text-[#4A403A] text-sm font-semibold uppercase">
+                Manquantes
+              </p>
+              <p className="text-3xl font-bold text-[#2F2F2F] mt-2">
+                {inventoryHosts.filter((h) => h.status === "missing").length}
               </p>
             </div>
           </div>

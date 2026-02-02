@@ -5,12 +5,17 @@ export interface HostData {
   hostname: string;
   os: string;
   type: "firewall" | "router" | "switch" | "server" | "workstation";
-  status: "online" | "warning" | "offline"; // <--- NOUVEAU
-  uptime: string;                           // <--- NOUVEAU
+  status: "online" | "warning" | "offline" | "missing"; // <--- NOUVEAU
+  uptime: string; // <--- NOUVEAU
   specs: { cpu: string; ram: string; disk: string }; // <--- NOUVEAU
   services: string[];
   lastSeen: string;
-  ports: { port: number; protocol: string; serviceName: string; status: string }[];
+  ports: {
+    port: number;
+    protocol: string;
+    serviceName: string;
+    status: string;
+  }[];
 }
 
 export const mockHosts: HostData[] = [
