@@ -16,6 +16,9 @@ type Node struct {
 	Type     string    `json:"type"` // "router", "server", "pc"
 	Services []Service `json:"services,omitempty"`
 	Risk     string    `json:"risk,omitempty"`
+	Status   string    `json:"status,omitempty"`
+	CreatedAt int64    `json:"created_at,omitempty"`
+	LastSeen int64     `json:"last_seen,omitempty"`
 }
 
 // Représente une connexion

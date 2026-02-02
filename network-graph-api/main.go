@@ -41,6 +41,21 @@ func main() {
 	}
 	r := gin.Default()
 
+	r.Use(func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, X-API-Token")
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	})
+
 	// Route POST pour recevoir les données
 	r.POST("/api/v1/ingest", func(c *gin.Context) {
 		apiToken := c.GetHeader("X-API-Token")
@@ -117,6 +132,7 @@ func main() {
 	r.POST("/api/v1/premium", addPremiumTokenHandler(authDB))
 	r.PATCH("/api/v1/premium/subscription-type", updatePremiumSubscriptionTypeHandler(authDB))
 	r.PATCH("/api/v1/premium/last-payment", updatePremiumLastPaymentHandler(authDB))
+	r.GET("/api/v1/premium/status", premiumStatusHandler(authDB))
 	r.GET("/api/v1/health", healthHandler(authDB))
 
 	r.Run(":8080")

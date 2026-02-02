@@ -1,16 +1,20 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import Layout from './Components/Layout';
-import { AppStoreProvider, useAppStore } from './contexts/AppStore';
-import HomePage from './Pages/HomePage';
-import PricingPage from './Pages/PricingPage';
-import MachineDetailPanel from './Components/MachineDetailPanel';
-import DashboardPage from './Pages/DashboardPage';
-import InventoryPage from './Pages/InventoryPage';
-import MapPage from './Pages/MapPage';
-import SettingsPage from './Pages/SettingsPage';
-import LoginPage from './Pages/LoginPage';
-import RegisterPage from './Pages/RegisterPage';
-import HostsPage from './Pages/HostsPage'; // <--- Import du login
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
+import Layout from "./Components/Layout";
+import { AppStoreProvider, useAppStore } from "./contexts/AppStore";
+import DashboardPage from "./Pages/DashboardPage";
+import HomePage from "./Pages/HomePage";
+import InventoryPage from "./Pages/InventoryPage";
+import LoginPage from "./Pages/LoginPage";
+import MapPage from "./Pages/MapPage";
+import PricingPage from "./Pages/PricingPage";
+import RegisterPage from "./Pages/RegisterPage";
+import SettingsPage from "./Pages/SettingsPage";
 
 function AppContent() {
   const navigate = useNavigate();
@@ -18,15 +22,16 @@ function AppContent() {
 
   const handleLogin = () => {
     login();
-    navigate('/map'); // Rediriger vers la cartographie
+    navigate("/map"); // Rediriger vers la cartographie
   };
 
   const handleLogout = () => {
     console.log("Déconnexion en cours...");
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("api_token");
+    localStorage.removeItem("currentUser");
     logout();
-    // L'état isAuthenticated étant passé à false, 
+    // L'état isAuthenticated étant passé à false,
     // le routeur affichera automatiquement le bloc (!isAuthenticated)
   };
 
@@ -35,7 +40,7 @@ function AppContent() {
       {/* Pages publiques */}
       <Route path="/" element={<HomePage />} />
       <Route path="/pricing" element={<PricingPage />} />
-    
+
       {/* Login/Register: redirect if already authenticated */}
       {!auth_status ? (
         <>
@@ -67,11 +72,10 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-
       <AppStoreProvider>
         <AppContent />
       </AppStoreProvider>
-{/*
+      {/*
       <Routes>
         {/* Si pas connecté, on montre uniquement le login et register }
         {!isAuthenticated ? (
