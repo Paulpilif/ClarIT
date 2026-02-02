@@ -83,28 +83,47 @@ func getHostname(h nmap.Host) string {
 	return "unknown"
 }
 
-func MayBeDomainController(services []Service) bool {
-	for _, s := range services {
-		switch s.Name {
-		case "ldap", "kerberos", "dns", "msrpc":
-			return true
+func MayBeDomainController(n *Node) bool {
+	hasLDAP := false
+	hasKerberos := false
+	hasDNS := false
+	hasSMB := false
+
+	for _, s := range n.Services {
+		switch s.Port {
+		case 389, 636:
+			hasLDAP = true
+		case 88:
+			hasKerberos = true
+		case 53:
+			hasDNS = true
+		case 445:
+			hasSMB = true
 		}
 	}
-	return false
+
+	score := 0
+	if hasLDAP { score++ }
+	if hasKerberos { score++ }
+	if hasDNS { score++ }
+	if hasSMB { score++ }
+
+	// DC = AU MOINS 3 sur 4
+	return score >= 3
 }
 
 func MayBeWorkstation(n *Node) bool {
 	openPorts := map[int]bool{}
 	serviceCount := len(n.Services)
 
-	for _, s := range n.Services {
-		openPorts[s.Port] = true
+	if strings.Contains(strings.ToLower(n.OS), "windows 10") ||
+	   strings.Contains(strings.ToLower(n.OS), "windows 11") {
+		return true
+	}
 
-		switch strings.ToLower(s.Name) {
-		case "ldap", "kerberos", "mysql", "postgresql",
-			"http", "https", "dns", "ntp", "msrpc":
-			return false
-		}
+	// Peu de services ouverts
+	if len(n.Services) <= 2 {
+		return true
 	}
 
 	if serviceCount > 5 {
@@ -147,6 +166,30 @@ func getDefaultGateway() (string, error) {
 	return "", errors.New("gateway not found")
 }
 
+func AddInferredGateway(g *NetworkGraph, ip string) {
+	id := generateID(ip)
+
+	for _, n := range g.Nodes {
+		if n.IP == ip {
+			return
+		}
+	}
+
+	g.Nodes = append(g.Nodes, Node{
+		ID:       id,
+		IP:       ip,
+		Hostname: "_gateway",
+		Type:     "router",
+		Risk:     "unknown",
+	})
+
+	g.Links = append(g.Links, Link{
+		Source: "scanner",
+		Target: id,
+		Type:   "gateway",
+	})
+}
+
 func MayBeRouter(n *Node) bool {
 	ports := map[int]bool{}
 	for _, s := range n.Services {
@@ -175,3 +218,38 @@ func MayBeRouter(n *Node) bool {
 
 	return false
 }
+
+
+func isWindowsServerOS(os string) bool {
+	os = strings.ToLower(os)
+	return strings.Contains(os, "windows server")
+}
+
+
+func MayBeWebServer(n *Node) bool {
+	hasHTTP := false
+	backendServices := 0
+
+	for _, s := range n.Services {
+		switch s.Port {
+		case 80, 443, 8080:
+			hasHTTP = true
+		case 3306, 5432, 6379, 9200:
+			backendServices++
+		}
+	}
+	// serveur web avec des services backend
+	if hasHTTP && backendServices > 0 {
+		return true
+	}
+
+	// serveur web "pur" MAIS OS serveur
+	if hasHTTP && isWindowsServerOS(n.OS) {
+		return true
+	}
+
+	return false
+}
+
+
+

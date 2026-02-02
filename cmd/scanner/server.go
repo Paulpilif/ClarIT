@@ -110,6 +110,14 @@ func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string,
 	}
 
 	graph := BuildGraph(fingerprints)
+
+	gwIP, err := getDefaultGateway()
+	if err == nil {
+		AddInferredGateway(&graph, gwIP)
+	} else {
+		log.Printf("gateway detection failed: %v", err)
+	}
+
 	EnrichGraph(&graph)
 
 	filename := ""
