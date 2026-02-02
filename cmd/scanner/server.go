@@ -16,6 +16,7 @@ import (
 type scanRequest struct {
 	CIDR     string `json:"cidr"`
 	Save     bool   `json:"save,omitempty"`
+	Company  string `json:"company,omitempty"`
 	APIToken string `json:"api_token,omitempty"`
 }
 
@@ -52,12 +53,16 @@ func startServer(listenAddr string, timeout time.Duration) {
 			req.CIDR = r.URL.Query().Get("cidr")
 		}
 
+		if req.Company == "" {
+			req.Company = r.URL.Query().Get("company")
+		}
+
 		save := req.Save
 		if saveParam := r.URL.Query().Get("save"); saveParam != "" {
 			save = strings.EqualFold(saveParam, "true") || saveParam == "1"
 		}
 
-		log.Printf("/scan request: method=%s url=%s cidr=%q save=%v", r.Method, r.URL.String(), req.CIDR, save)
+		log.Printf("/scan request: method=%s url=%s cidr=%q company=%q save=%v", r.Method, r.URL.String(), req.CIDR, req.Company, save)
 
 		if req.CIDR == "" {
 			http.Error(w, "missing cidr", http.StatusBadRequest)
@@ -67,7 +72,7 @@ func startServer(listenAddr string, timeout time.Duration) {
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
-		graph, filename, err := runScan(ctx, req.CIDR, save)
+		graph, filename, err := runScan(ctx, req.CIDR, save, req.Company)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -105,7 +110,7 @@ func startServer(listenAddr string, timeout time.Duration) {
 	}
 }
 
-func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string, error) {
+func runScan(ctx context.Context, cidr string, save bool, companyName string) (NetworkGraph, string, error) {
 	hosts, err := DiscoverHosts(ctx, cidr)
 	if err != nil {
 		return NetworkGraph{}, "", err
@@ -134,7 +139,11 @@ func runScan(ctx context.Context, cidr string, save bool) (NetworkGraph, string,
 
 	filename := ""
 	if save {
-		filename = NextGraphFilename()
+		var err error
+		filename, err = GraphFilename(companyName, cidr)
+		if err != nil {
+			return NetworkGraph{}, "", err
+		}
 		if err := saveGraphJSON(filename, &graph); err != nil {
 			return NetworkGraph{}, "", err
 		}

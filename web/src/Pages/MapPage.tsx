@@ -18,8 +18,7 @@ const nodeTypes = { infra: InfraNode };
 const DEFAULT_CIDR = "10.211.55.0/24";
 const SCANNER_BASE_URL =
   import.meta.env.VITE_SCANNER_BASE_URL || "http://localhost:8090";
-const GRAPH_JSON_URL =
-  import.meta.env.VITE_GRAPH_JSON_URL || "/shared/network_graph_1.json";
+const GRAPH_JSON_URL = import.meta.env.VITE_GRAPH_JSON_URL || "";
 
 type SketchRole =
   | "SECURITY_GATEWAY"
@@ -173,9 +172,14 @@ export default function MapPage() {
 
     const loadGraph = async () => {
       try {
-        const response = await fetch(GRAPH_JSON_URL, { cache: "no-store" });
+        const companyName = localStorage.getItem("currentUser") || "default";
+        const cidrSegment = DEFAULT_CIDR.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const graphUrl =
+          GRAPH_JSON_URL || `/shared/${companyName}/scan_${cidrSegment}.json`;
+
+        const response = await fetch(graphUrl, { cache: "no-store" });
         if (!response.ok) {
-          throw new Error("Impossible de charger network_graph_1.json");
+          throw new Error("Impossible de charger le dernier scan");
         }
 
         const graph = (await response.json()) as NetworkGraph;
@@ -207,10 +211,14 @@ export default function MapPage() {
     setScanError(null);
 
     const apiToken = localStorage.getItem("apiToken");
+    const companyName = localStorage.getItem("currentUser");
     const payload: Record<string, unknown> = {
       cidr: DEFAULT_CIDR,
       save: true,
     };
+    if (companyName) {
+      payload.company = companyName;
+    }
     if (apiToken) {
       payload.api_token = apiToken;
     }

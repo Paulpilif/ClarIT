@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -197,18 +196,49 @@ func saveGraphJSON(path string, g *NetworkGraph) error {
 	return enc.Encode(g)
 }
 
-func NextGraphFilename() string {
-	files, _ := filepath.Glob("results/network_graph_*.json")
-	max := 0
+func GraphFilename(companyName string, cidr string) (string, error) {
+	companySegment := sanitizePathSegment(companyName)
+	if companySegment == "" {
+		companySegment = "default"
+	}
 
-	for _, f := range files {
-		base := filepath.Base(f)
-		num := strings.TrimSuffix(strings.TrimPrefix(base, "network_graph_"), ".json")
-		if n, err := strconv.Atoi(num); err == nil && n > max {
-			max = n
+	cidrSegment := sanitizePathSegment(cidr)
+	if cidrSegment == "" {
+		cidrSegment = "unknown"
+	}
+
+	dir := filepath.Join("results", companySegment)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+
+	filename := "scan_" + cidrSegment + ".json"
+	return filepath.Join(dir, filename), nil
+}
+
+func sanitizePathSegment(input string) string {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	for _, r := range trimmed {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+		case r >= 'A' && r <= 'Z':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '_' || r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('_')
 		}
 	}
-	return "results/network_graph_" + strconv.Itoa(max+1) + ".json"
+
+	return b.String()
 }
 
 func getLocalIP() string {

@@ -115,6 +115,8 @@ func main() {
 	r.POST("/api/v1/login", loginHandler(authDB))
 	r.POST("/api/v1/users", createUserHandler(authDB))
 	r.POST("/api/v1/premium", addPremiumTokenHandler(authDB))
+	r.PATCH("/api/v1/premium/subscription-type", updatePremiumSubscriptionTypeHandler(authDB))
+	r.PATCH("/api/v1/premium/last-payment", updatePremiumLastPaymentHandler(authDB))
 	r.GET("/api/v1/health", healthHandler(authDB))
 
 	r.Run(":8080")
