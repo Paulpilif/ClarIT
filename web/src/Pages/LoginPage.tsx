@@ -27,74 +27,70 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         body: JSON.stringify({ username, password }),
       });
 
+    try {
+      // Appel à l'API d'authentification
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+
       if (!response.ok) {
-        setError("Identifiants incorrects.");
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de la connexion');
         setIsSubmitting(false);
         return;
       }
 
       const data = await response.json();
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("currentUser", data.companyName ?? username);
-      localStorage.setItem("userRole", data.role ?? "USER");
-      if (data.apiToken) {
-        localStorage.setItem("apiToken", data.apiToken);
-      }
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('currentUser', data.user.username);
       onLogin();
-    } catch {
-      setError("Erreur réseau.");
+      navigate('/map');
+    } catch (err) {
+      setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        width: "100vw",
-        backgroundColor: "#020617",
-        position: "fixed",
-        top: 0,
-        left: 0,
-        zIndex: 50,
-      }}
-    >
-      <div className="w-full max-w-md bg-[#0f172a] rounded-2xl shadow-2xl border border-slate-800 p-8 m-4">
+    // Le style inline garantit que le fond prend tout l'écran, même sur mobile
+    <div style={{ 
+      display: 'flex', justifyContent: 'center', alignItems: 'center', 
+      height: '100vh', width: '100vw', backgroundColor: '#0F1117',
+      position: 'fixed', top: 0, left: 0, zIndex: 50
+    }}>
+      {/* w-full + max-w-md + m-4 : Assure que la carte ne touche pas les bords sur mobile */}
+      <div className="w-full max-w-md bg-[#161B22] rounded-2xl shadow-2xl border border-[#30363D] p-8 m-4">
+        
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/20 rounded-full mb-4 ring-1 ring-blue-500/30">
-            <Shield className="w-8 h-8 text-blue-500" />
+            <Shield className="w-8 h-8 text-[#3B82F6]" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Accès ClarIT</h1>
-          <p className="text-slate-400 text-sm mt-2">
-            Zone d'administration sécurisée
-          </p>
+          <h1 className="text-2xl font-bold text-[#E6EDF3]">Accès ClarIT</h1>
+          <p className="text-[#8B949E] text-sm mt-2">Zone d'administration sécurisée</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Identifiant
-            </label>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">Identifiant</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[#1e293b] border border-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 outline-none"
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 outline-none"
               placeholder="Ex: ClarIT"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Mot de passe
-            </label>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">Mot de passe</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#1e293b] border border-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 outline-none"
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 outline-none"
               placeholder="••••••••"
             />
           </div>
@@ -108,17 +104,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+            className="w-full bg-[#1E40AF] hover:bg-[#1e3a8a] text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
           >
             {isSubmitting ? "Connexion..." : "Se connecter"}
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-slate-800">
-          <p className="text-slate-400 text-sm text-center mb-4">Pas encore de compte ?</p>
+        <div className="mt-6 pt-6 border-t border-[#30363D]">
+          <p className="text-[#8B949E] text-sm text-center mb-4">Pas encore de compte ?</p>
           <button
             onClick={() => navigate('/register')}
-            className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700 text-white font-medium py-3 rounded-lg transition-colors border border-slate-600"
+            className="w-full flex items-center justify-center gap-2 bg-[#21262D]/50 hover:bg-[#21262D] text-[#E6EDF3] font-medium py-3 rounded-lg transition-colors border border-[#30363D]"
           >
             <UserPlus size={18} />
             <span>S'inscrire</span>

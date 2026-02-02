@@ -1,17 +1,17 @@
-import { useEffect, useState } from "react";
-import ReactFlow, {
-  Background,
-  useNodesState,
-  useEdgesState,
-  type Node,
-  type Edge,
-  Controls,
+import { useState, useMemo, useEffect } from "react";
+import ReactFlow, { 
+  Background, 
+  useNodesState, 
+  useEdgesState, 
+  type Node, 
+  type Edge, 
+  Controls
 } from "reactflow";
 import "reactflow/dist/style.css";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
-import { Zap, CheckCircle } from "lucide-react";
-import MachineDetailPanel from "../Components/MachineDetailPanel";
+import { Zap, CheckCircle, RotateCcw, X } from "lucide-react";
+import { useAppStore } from "../contexts/AppStore";
 
 const nodeTypes = { infra: InfraNode };
 
@@ -157,98 +157,106 @@ function mapGraphToFlow(graph: NetworkGraph) {
 }
 
 export default function MapPage() {
-  const [scanStarted, setScanStarted] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
+  const {
+    scan_data_status,
+    last_scan_target,
+    scan_target_prompt_requested,
+    set_scan_target_prompt_requested,
+    launch_scan,
+    is_scanning,
+  } = useAppStore();
+  
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showIPModal, setShowIPModal] = useState(false);
+  const [scanIP, setScanIP] = useState('');
+  const [ipError, setIpError] = useState('');
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  
   // AJOUT 2 : État pour gérer le clic (Sélection) vs le survol (Hover)
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
+  const shouldShowIPModal = showIPModal || scan_target_prompt_requested;
 
+  // Effet pour masquer le message après 3 secondes
   useEffect(() => {
-    let isMounted = true;
-
-    const loadGraph = async () => {
-      try {
-        const companyName = localStorage.getItem("currentUser") || "default";
-        const cidrSegment = DEFAULT_CIDR.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const graphUrl =
-          GRAPH_JSON_URL || `/shared/${companyName}/scan_${cidrSegment}.json`;
-
-        const response = await fetch(graphUrl, { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("Impossible de charger le dernier scan");
-        }
-
-        const graph = (await response.json()) as NetworkGraph;
-        const { nodes: flowNodes, edges: flowEdges } = mapGraphToFlow(graph);
-
-        if (isMounted) {
-          setNodes(flowNodes);
-          setEdges(flowEdges);
-          setScanStarted(true);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Erreur lors du chargement";
-        if (isMounted) {
-          console.warn(message);
-        }
-      }
-    };
-
-    loadGraph();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [setNodes, setEdges]);
-
-  const handleStartScan = async () => {
-    setIsScanning(true);
-    setScanError(null);
-
-    const apiToken = localStorage.getItem("apiToken");
-    const companyName = localStorage.getItem("currentUser");
-    const payload: Record<string, unknown> = {
-      cidr: DEFAULT_CIDR,
-      save: true,
-    };
-    if (companyName) {
-      payload.company = companyName;
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-    if (apiToken) {
-      payload.api_token = apiToken;
+  }, [showSuccessMessage]);
+
+  const handleStartScan = () => {
+    setShowIPModal(true);
+    setScanIP(last_scan_target ?? '');
+    setIpError('');
+    set_scan_target_prompt_requested(false);
+  };
+
+  const validateIP = (ip: string): boolean => {
+    const ipRegex = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+    return ipRegex.test(ip);
+  };
+
+  const handleConfirmScan = async () => {
+    const target = scanIP.trim() || last_scan_target?.trim() || '';
+
+    if (!target) {
+      setIpError('Veuillez entrer une adresse IP');
+      return;
     }
 
-    try {
-      const response = await fetch(`${SCANNER_BASE_URL}/scan`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    if (!validateIP(target)) {
+      setIpError('Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6');
+      return;
+    }
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Erreur lors du scan");
-      }
+    setIpError('');
+    setShowIPModal(false);
+    set_scan_target_prompt_requested(false);
 
-      const data = (await response.json()) as { graph?: NetworkGraph };
-      const graph = data.graph ?? (data as unknown as NetworkGraph);
-      const { nodes: flowNodes, edges: flowEdges } = mapGraphToFlow(graph);
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-      setScanStarted(true);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Erreur lors du scan";
-      setScanError(message);
-    } finally {
-      setIsScanning(false);
+    const result = await launch_scan(target);
+    if (result === 'success') {
+      setShowSuccessMessage(true);
+    }
+  };
+
+  const handleCancelScan = () => {
+    setShowIPModal(false);
+    setScanIP('');
+    setIpError('');
+    set_scan_target_prompt_requested(false);
+  };
+
+  const handleRestartScan = () => {
+    setShowIPModal(true);
+    setScanIP(last_scan_target ?? '');
+    setIpError('');
+    set_scan_target_prompt_requested(false);
+  };
+
+  const handleConfirmRestartScan = async () => {
+    const target = scanIP.trim() || last_scan_target?.trim() || '';
+
+    if (!target) {
+      setIpError('Veuillez entrer une adresse IP');
+      return;
+    }
+
+    if (!validateIP(target)) {
+      setIpError('Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6');
+      return;
+    }
+
+    setIpError('');
+    setShowIPModal(false);
+    setShowSuccessMessage(false);
+    set_scan_target_prompt_requested(false);
+
+    const result = await launch_scan(target);
+    if (result === 'success') {
+      setShowSuccessMessage(true);
     }
   };
   // AJOUT 3 : Gestionnaire de clic sur un nœud
@@ -274,31 +282,28 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col relative overflow-hidden">
-      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
-        Architecture Réseau
-      </h1>
+    <div className="h-full w-full bg-[#FAF0E6] p-4 md:p-6 text-[#2F2F2F] flex flex-col">
+      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
 
-      {!scanStarted ? (
+  {scan_data_status !== 'valid' ? (
         <div className="flex items-center justify-center flex-1">
-          <div className="bg-[#0f172a] p-8 md:p-12 rounded-xl border border-slate-800 text-center max-w-md shadow-lg">
+          <div className="bg-white p-8 md:p-12 rounded-xl border border-[#4A403A] text-center max-w-md shadow-lg">
             <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/20 rounded-full mb-4 ring-1 ring-blue-500/30">
-                <Zap className="w-8 h-8 text-blue-500" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 ring-1 ring-blue-300">
+                <Zap className="w-8 h-8 text-blue-600" />
               </div>
             </div>
-            <h2 className="text-xl font-bold mb-3">Lancer un scan réseau</h2>
-            <p className="text-slate-400 text-sm mb-6">
-              Analysez votre infrastructure pour visualiser la cartographie
-              complète de votre réseau.
+            <h2 className="text-xl font-bold mb-3 text-[#2F2F2F]">Lancer un scan réseau</h2>
+            <p className="text-[#6B6B6B] text-sm mb-6">
+              Analysez votre infrastructure pour visualiser la cartographie complète de votre réseau.
             </p>
             <button
               onClick={handleStartScan}
-              disabled={isScanning}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+              disabled={is_scanning}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2"
             >
               <Zap size={18} />
-              {isScanning ? "Scan en cours..." : "Lancer le scan"}
+              {is_scanning ? 'Scan en cours...' : 'Lancer le scan'}
             </button>
             {scanError && (
               <p className="mt-4 text-sm text-red-400">{scanError}</p>
@@ -307,13 +312,15 @@ export default function MapPage() {
         </div>
       ) : (
         <div className="flex flex-col flex-1 gap-4">
-          <div className="p-3 bg-emerald-900/20 border border-emerald-900/30 rounded-lg flex items-center gap-2 text-emerald-400 text-sm">
-            <CheckCircle size={18} />
-            Scan terminé - Architecture réseau cartographiée
-          </div>
+          {showSuccessMessage && (
+            <div className="p-3 bg-green-100 border border-green-300 rounded-lg flex items-center gap-2 text-green-700 text-sm animate-in fade-in">
+              <CheckCircle size={18} />
+              Scan terminé - Architecture réseau cartographiée
+            </div>
+          )}
 
           <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
-            <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
+            <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-white border border-[#4A403A] relative shadow-inner">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -327,8 +334,8 @@ export default function MapPage() {
                 fitView
                 panOnScroll={window.innerWidth >= 1024}
               >
-                <Background color="#334155" gap={30} size={1} />
-                <Controls className="bg-slate-800 border-slate-700 fill-white" />
+                <Background color="#E8E4DC" gap={30} size={1} />
+                <Controls className="bg-[#FAF0E6] border-[#4A403A] fill-[#2F2F2F]" />
               </ReactFlow>
 
               {hoveredNode && !selectedNode && (
@@ -336,31 +343,80 @@ export default function MapPage() {
               )}
             </div>
 
-            <div className="w-full lg:w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
-              <h3 className="font-bold mb-4 text-slate-200">Légende</h3>
+            <div className="w-full lg:w-52 p-4 bg-white rounded-xl border border-[#4A403A] h-fit shadow-lg">
+              <h3 className="font-bold mb-4 text-[#2F2F2F]">Légende</h3>
 
-              <div className="grid grid-cols-2 gap-3 text-sm text-slate-400 lg:flex lg:flex-col">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />{" "}
-                  Gateway
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />{" "}
-                  Router
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />{" "}
-                  Switch
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />{" "}
-                  Server
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-slate-500 shadow-[0_0_8px_rgba(100,116,139,0.6)]" />{" "}
-                  Workstation
-                </div>
+              <div className="grid grid-cols-2 gap-3 text-sm text-[#6B6B6B] lg:flex lg:flex-col mb-6">
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"/> Server</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#8B7355] shadow-[0_0_8px_rgba(139,115,85,0.6)]"/> Workstation</div>
               </div>
+
+              <button
+                onClick={handleRestartScan}
+                disabled={is_scanning}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                <RotateCcw size={16} />
+                {is_scanning ? 'Scan en cours...' : 'Relancer un scan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour demander l'IP */}
+      {shouldShowIPModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[#2F2F2F]">Adresse IP du réseau</h2>
+              <button
+                onClick={handleCancelScan}
+                className="text-[#6B6B6B] hover:text-[#2F2F2F]"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p className="text-[#6B6B6B] text-sm mb-4">
+              Entrez l'adresse IP du réseau que vous souhaitez scanner
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-[#2F2F2F] mb-2">
+                Adresse IP
+              </label>
+              <input
+                type="text"
+                value={scanIP || last_scan_target || ''}
+                onChange={(e) => {
+                  setScanIP(e.target.value);
+                  setIpError('');
+                }}
+                placeholder="ex: 192.168.1.0 ou 2001:db8::1"
+                className="w-full px-3 py-2 border border-[#D0CACA] rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-[#2F2F2F]"
+              />
+              {ipError && (
+                <p className="text-red-600 text-sm mt-2">{ipError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelScan}
+                className="flex-1 px-4 py-2 border border-[#D0CACA] rounded-lg text-[#2F2F2F] font-medium hover:bg-[#FAF0E6] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={scan_data_status === 'valid' ? handleConfirmRestartScan : handleConfirmScan}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Lancer le scan
+              </button>
             </div>
           </div>
         </div>

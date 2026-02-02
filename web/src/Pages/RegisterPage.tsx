@@ -53,92 +53,68 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
     }
 
     try {
-      const response = await fetch("/api/v1/users", {
-        method: "POST",
+      // Appel à l'API d'authentification
+      const response = await fetch('http://localhost:3001/api/users', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          username: username.trim(),
-          password,
-        }),
+        body: JSON.stringify({ username: username.trim(), password })
       });
 
       if (!response.ok) {
-        let apiError = "";
-        try {
-          const errorBody = await response.json();
-          if (typeof errorBody?.error === "string") {
-            apiError = errorBody.error;
-          }
-        } catch {
-          // ignore JSON parsing errors
-        }
-
-        if (response.status === 409 || apiError === "user_exists") {
-          setError("Ce nom d'utilisateur existe déjà");
-        } else if (
-          response.status === 400 ||
-          apiError === "missing_credentials"
-        ) {
-          setError("Informations manquantes ou invalides");
-        } else {
-          setError("Erreur lors de la création du compte");
-        }
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de la création du compte');
         setIsSubmitting(false);
         return;
       }
 
-      const data = await response.json();
-      if (data?.apiToken) {
-        localStorage.setItem("apiToken", data.apiToken);
-      }
-
-      setSuccess("Compte créé avec succès ! Redirection vers la connexion...");
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
-
-      // Rediriger vers la page de login après 2 secondes
-      setTimeout(() => {
-        navigate("/login");
-        if (onRegisterSuccess) onRegisterSuccess();
-      }, 2000);
-    } catch {
-      setError("Erreur réseau.");
+      // Succès
+    } catch (err) {
+      setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);
     }
+
+    setSuccess('Compte créé avec succès ! Redirection vers la connexion...');
+    setUsername('');
+    setPassword('');
+    setConfirmPassword('');
+
+    // Rediriger vers la page de login après 2 secondes
+    setTimeout(() => {
+      navigate('/login');
+      if (onRegisterSuccess) onRegisterSuccess();
+    }, 2000);
   };
 
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        width: "100vw",
-        backgroundColor: "#020617",
-        position: "fixed",
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: '#0F1117',
+        position: 'fixed',
         top: 0,
         left: 0,
         zIndex: 50,
       }}
     >
-      <div className="w-full max-w-md bg-[#0f172a] rounded-2xl shadow-2xl border border-slate-800 p-8 m-4">
+      <div className="w-full max-w-md bg-[#161B22] rounded-2xl shadow-2xl border border-[#30363D] p-8 m-4">
+        
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-900/20 rounded-full mb-4 ring-1 ring-emerald-500/30">
-            <UserPlus className="w-8 h-8 text-emerald-500" />
+            <UserPlus className="w-8 h-8 text-[#059669]" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Créer un compte</h1>
-          <p className="text-slate-400 text-sm mt-2">
-            Inscrivez-vous pour accéder à ClarIT
-          </p>
+          <h1 className="text-2xl font-bold text-[#E6EDF3]">Créer un compte</h1>
+          <p className="text-[#8B949E] text-sm mt-2">Inscrivez-vous pour accéder à ClarIT</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
               Nom d'utilisateur
             </label>
             <input
@@ -146,13 +122,13 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isSubmitting}
-              className="w-full bg-[#1e293b] border border-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
               placeholder="Ex: john_doe"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
               Mot de passe
             </label>
             <input
@@ -160,13 +136,13 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isSubmitting}
-              className="w-full bg-[#1e293b] border border-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
               Confirmer le mot de passe
             </label>
             <input
@@ -174,7 +150,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={isSubmitting}
-              className="w-full bg-[#1e293b] border border-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
+              className="w-full bg-[#21262D] border border-[#30363D] text-[#E6EDF3] rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-600 outline-none disabled:opacity-50"
               placeholder="••••••••"
             />
           </div>
@@ -194,16 +170,16 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20"
+            className="w-full bg-[#059669] hover:bg-[#047857] disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20"
           >
             {isSubmitting ? "Création..." : "S'inscrire"}
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-slate-800">
+        <div className="mt-6 pt-6 border-t border-[#30363D]">
           <button
-            onClick={() => navigate("/login")}
-            className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-sm"
+            onClick={() => navigate('/login')}
+            className="w-full flex items-center justify-center gap-2 text-[#8B949E] hover:text-[#E6EDF3] transition-colors text-sm"
           >
             <ArrowLeft size={16} />
             Retour à la connexion
