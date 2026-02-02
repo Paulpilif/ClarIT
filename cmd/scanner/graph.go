@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -86,19 +85,75 @@ func EnrichGraph(g *NetworkGraph) {
 	for i := range g.Nodes {
 		n := &g.Nodes[i]
 		risk := "ok"
-
 		for _, s := range n.Services {
 			if isVulnerable(s.Name, s.Version) {
 				risk = "vulnerable"
 				break
 			}
-			if isObsolete(s.Name, s.Version) {
+			if isObsolete(s.Name, s.Version) && risk != "vulnerable" {
 				risk = "obsolete"
 			}
 		}
 		n.Risk = risk
+
+		n.Type = ClassifyNode(n)
 	}
 }
+
+
+func ClassifyNode(n *Node) string {
+	ports := map[int]bool{}
+	services := map[string]bool{}
+
+	for _, s := range n.Services {
+		ports[s.Port] = true
+		services[strings.ToLower(s.Name)] = true
+	}
+
+	if ports[22] && ports[443] && len(n.Services) < 5 {
+		return "firewall"
+	}
+
+	if services["vmware-auth"] || ports[902] || ports[903] {
+		return "hypervisor"
+	}
+
+	if ports[53] && (ports[67] || ports[68]) {
+		return "network-device"
+	}
+
+	if MayBeDomainController(n.Services) ||
+		(ports[389] && (ports[88] || ports[445])) {
+		return "domain-controller"
+	}
+
+	if ports[3306] || ports[5432] || ports[27017] {
+		return "database-server"
+	}
+
+	if ports[80] || ports[443] {
+		return "web-server"
+	}
+
+	if ports[8080] || ports[8443] {
+		return "application-server"
+	}
+
+	if ports[22] && len(ports) <= 3 {
+		return "bastion"
+	}
+
+	if MayBeWorkstation(n) {
+		return "workstation"
+	}
+
+	if len(n.Services) >= 3 {
+		return "server"
+	}
+
+	return "unknown"
+}
+
 
 // Risk
 
@@ -141,18 +196,60 @@ func saveGraphJSON(path string, g *NetworkGraph) error {
 	return enc.Encode(g)
 }
 
-func NextGraphFilename() string {
-	files, _ := filepath.Glob("results/network_graph_*.json")
-	max := 0
+func GraphFilename(companyName string, cidr string) (string, error) {
+	companySegment := sanitizePathSegment(companyName)
+	if companySegment == "" {
+		companySegment = "default"
+	}
 
-	for _, f := range files {
-		base := filepath.Base(f)
-		num := strings.TrimSuffix(strings.TrimPrefix(base, "network_graph_"), ".json")
-		if n, err := strconv.Atoi(num); err == nil && n > max {
-			max = n
+	cidrSegment := sanitizePathSegment(cidr)
+	if cidrSegment == "" {
+		cidrSegment = "unknown"
+	}
+
+	baseDir := getResultsBaseDir()
+	dir := filepath.Join(baseDir, companySegment)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+
+	filename := "scan_" + cidrSegment + ".json"
+	return filepath.Join(dir, filename), nil
+}
+
+func getResultsBaseDir() string {
+	if value := strings.TrimSpace(os.Getenv("SCANNER_RESULTS_DIR")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("RESULTS_DIR")); value != "" {
+		return value
+	}
+	return "results"
+}
+
+func sanitizePathSegment(input string) string {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	for _, r := range trimmed {
+		switch {
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+		case r >= 'A' && r <= 'Z':
+			b.WriteRune(r)
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '_' || r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('_')
 		}
 	}
-	return "results/network_graph_" + strconv.Itoa(max+1) + ".json"
+
+	return b.String()
 }
 
 func getLocalIP() string {

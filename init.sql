@@ -18,7 +18,13 @@ CREATE INDEX IF NOT EXISTS idx_companies_api_token ON companies (api_token);
 
 -- Premium whitelist table
 CREATE TABLE IF NOT EXISTS premium_whitelist (
-  valid_token UUID PRIMARY KEY
+  valid_token UUID PRIMARY KEY,
+  start_date DATE,
+  last_payment_date DATE,
+  subscription_type TEXT
 );
 
 COMMENT ON COLUMN premium_whitelist.valid_token IS 'Whitelisted premium access token (UUID).';
+COMMENT ON COLUMN premium_whitelist.start_date IS 'Subscription start date (YYYY-MM-DD).';
+COMMENT ON COLUMN premium_whitelist.last_payment_date IS 'Last payment date (YYYY-MM-DD).';
+COMMENT ON COLUMN premium_whitelist.subscription_type IS 'Subscription type (mensuel/annuel).';

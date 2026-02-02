@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { UserPlus, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { UserPlus, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface RegisterPageProps {
   onRegisterSuccess?: () => void;
@@ -8,46 +8,46 @@ interface RegisterPageProps {
 
 export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setIsSubmitting(true);
 
     // Validations
     if (!username.trim()) {
-      setError('Veuillez entrer un nom d\'utilisateur');
+      setError("Veuillez entrer un nom d'utilisateur");
       setIsSubmitting(false);
       return;
     }
 
     if (username.length < 3) {
-      setError('Le nom d\'utilisateur doit contenir au moins 3 caractères');
+      setError("Le nom d'utilisateur doit contenir au moins 3 caractères");
       setIsSubmitting(false);
       return;
     }
 
     if (!password) {
-      setError('Veuillez entrer un mot de passe');
+      setError("Veuillez entrer un mot de passe");
       setIsSubmitting(false);
       return;
     }
 
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError("Le mot de passe doit contenir au moins 6 caractères");
       setIsSubmitting(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError("Les mots de passe ne correspondent pas");
       setIsSubmitting(false);
       return;
     }
@@ -73,7 +73,6 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
     } catch (err) {
       setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);
-      return;
     }
 
     setSuccess('Compte créé avec succès ! Redirection vers la connexion...');
@@ -100,7 +99,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
         position: 'fixed',
         top: 0,
         left: 0,
-        zIndex: 50
+        zIndex: 50,
       }}
     >
       <div className="w-full max-w-md bg-[#161B22] rounded-2xl shadow-2xl border border-[#30363D] p-8 m-4">
@@ -173,7 +172,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
             disabled={isSubmitting}
             className="w-full bg-[#059669] hover:bg-[#047857] disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20"
           >
-            {isSubmitting ? 'Création...' : 'S\'inscrire'}
+            {isSubmitting ? "Création..." : "S'inscrire"}
           </button>
         </form>
 

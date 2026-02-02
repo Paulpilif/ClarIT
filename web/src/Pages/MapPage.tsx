@@ -8,7 +8,6 @@ import ReactFlow, {
   Controls
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { mockHosts } from "../mock/hosts";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
 import { Zap, CheckCircle, RotateCcw, X } from "lucide-react";
@@ -16,7 +15,17 @@ import { useAppStore } from "../contexts/AppStore";
 
 const nodeTypes = { infra: InfraNode };
 
-type SketchRole = "SECURITY_GATEWAY" | "ROUTER" | "SWITCH" | "SERVER" | "WORKSTATION";
+const DEFAULT_CIDR = "10.211.55.0/24";
+const SCANNER_BASE_URL =
+  import.meta.env.VITE_SCANNER_BASE_URL || "http://localhost:8090";
+const GRAPH_JSON_URL = import.meta.env.VITE_GRAPH_JSON_URL || "";
+
+type SketchRole =
+  | "SECURITY_GATEWAY"
+  | "ROUTER"
+  | "SWITCH"
+  | "SERVER"
+  | "WORKSTATION";
 
 const LAYERS_Y: Record<SketchRole, number> = {
   SECURITY_GATEWAY: 100,
@@ -26,31 +35,126 @@ const LAYERS_Y: Record<SketchRole, number> = {
   WORKSTATION: 700,
 };
 
-function getRole(host: any): SketchRole {
+type GraphService = {
+  port: number;
+  protocol: string;
+  name: string;
+  version?: string;
+};
+
+type GraphNode = {
+  id: string;
+  ip: string;
+  hostname: string;
+  type: string;
+  services?: GraphService[];
+  risk?: string;
+};
+
+type GraphLink = {
+  source: string;
+  target: string;
+  type: string;
+};
+
+type NetworkGraph = {
+  nodes: GraphNode[];
+  links: GraphLink[];
+};
+
+function getRole(host: GraphNode): SketchRole {
   const type = host.type?.toLowerCase();
-  if (type === "firewall") return "SECURITY_GATEWAY";
+  if (type === "firewall" || type === "gateway") return "SECURITY_GATEWAY";
   if (type === "router") return "ROUTER";
   if (type === "switch") return "SWITCH";
-  if (type === "workstation") return "WORKSTATION";
+  if (type === "workstation" || type === "pc") return "WORKSTATION";
   return "SERVER";
 }
 
-const initialNodes: Node[] = mockHosts.map((h) => {
-  const role = getRole(h);
+function toHostType(type?: string) {
+  const normalized = type?.toLowerCase();
+  if (normalized === "firewall" || normalized === "gateway") return "firewall";
+  if (normalized === "router") return "router";
+  if (normalized === "switch") return "switch";
+  if (normalized === "workstation" || normalized === "pc") return "workstation";
+  return "server";
+}
+
+function mapGraphToFlow(graph: NetworkGraph) {
+  const roleBuckets: Record<SketchRole, GraphNode[]> = {
+    SECURITY_GATEWAY: [],
+    ROUTER: [],
+    SWITCH: [],
+    SERVER: [],
+    WORKSTATION: [],
+  };
+
+  graph.nodes.forEach((node) => {
+    roleBuckets[getRole(node)].push(node);
+  });
+
+  const rolePositions = new Map<string, { index: number; total: number }>();
+  (Object.keys(roleBuckets) as SketchRole[]).forEach((role) => {
+    roleBuckets[role].forEach((node, index) => {
+      rolePositions.set(node.id, { index, total: roleBuckets[role].length });
+    });
+  });
+
   const centerX = 600;
   const horizontalGap = 200;
-  const peers = mockHosts.filter(host => getRole(host) === role);
-  const index = peers.findIndex(host => host.id === h.id);
-  const total = peers.length;
-  const xPos = centerX + (index - (total - 1) / 2) * horizontalGap;
 
-  return {
-    id: h.id,
-    type: "infra",
-    position: { x: xPos, y: LAYERS_Y[role] },
-    data: { ...h, role: role },
-  };
-});
+  const nodes: Node[] = graph.nodes.map((node) => {
+    const role = getRole(node);
+    const position = rolePositions.get(node.id) ?? { index: 0, total: 1 };
+    const xPos =
+      centerX + (position.index - (position.total - 1) / 2) * horizontalGap;
+
+    const services = node.services ?? [];
+    const mappedServices = services.map((s) => s.name);
+    const mappedPorts = services.map((s) => ({
+      port: s.port,
+      protocol: s.protocol,
+      serviceName: s.name,
+      status: "open",
+    }));
+
+    const risk = node.risk?.toLowerCase();
+    const status =
+      risk === "vulnerable" || risk === "obsolete" ? "warning" : "online";
+
+    const data = {
+      id: node.id,
+      ip: node.ip,
+      hostname: node.hostname || node.ip,
+      os: node.type ? node.type.toUpperCase() : "N/A",
+      type: toHostType(node.type),
+      status,
+      uptime: "N/A",
+      specs: { cpu: "N/A", ram: "N/A", disk: "N/A" },
+      services: mappedServices,
+      lastSeen: new Date().toISOString(),
+      ports: mappedPorts,
+      role,
+    };
+
+    return {
+      id: node.id,
+      type: "infra",
+      position: { x: xPos, y: LAYERS_Y[role] ?? LAYERS_Y.SERVER },
+      data,
+    };
+  });
+
+  const edges: Edge[] = graph.links.map((link, index) => ({
+    id: `e-${link.source}-${link.target}-${index}`,
+    source: link.source,
+    target: link.target,
+    animated: true,
+    style: { stroke: "#3b82f6", strokeWidth: 1.5 },
+  }));
+
+  return { nodes, edges };
+}
 
 export default function MapPage() {
   const {
@@ -158,53 +262,24 @@ export default function MapPage() {
   // AJOUT 3 : Gestionnaire de clic sur un nœud
   const onNodeClick = (_: React.MouseEvent, node: Node) => {
     setSelectedNode(node.data); // Ouvre le panneau
-    setHoveredNode(null);       // Cache l'infobulle pour ne pas gêner
+    setHoveredNode(null); // Cache l'infobulle pour ne pas gêner
   };
 
   // AJOUT 4 : Gestionnaire de clic dans le vide (pour fermer le panneau)
   const onPaneClick = () => {
     setSelectedNode(null);
-
   };
 
   const onNodeMouseEnter = (_: React.MouseEvent, node: Node) => {
     // On affiche l'infobulle seulement si le panneau n'est pas ouvert
     if (!selectedNode) {
-        setHoveredNode(node.data);
+      setHoveredNode(node.data);
     }
   };
 
   const onNodeMouseLeave = () => {
     setHoveredNode(null);
   };
-
-  const initialEdges: Edge[] = useMemo(() => {
-    const edges: Edge[] = [];
-    const gateway = nodes.find(n => n.data.role === "SECURITY_GATEWAY");
-    const router = nodes.find(n => n.data.role === "ROUTER");
-    const sw = nodes.find(n => n.data.role === "SWITCH");
-
-    const createLink = (source: string, target: string, color = '#3b82f6') => ({
-      id: `e-${source}-${target}`,
-      source,
-      target,
-      animated: true,
-      style: { stroke: color, strokeWidth: 1.5 },
-    });
-
-    if (gateway && router) edges.push(createLink(gateway.id, router.id, '#ef4444'));
-    if (router && sw) edges.push(createLink(router.id, sw.id, '#10b981'));
-
-    nodes.forEach(node => {
-      if (sw && (node.data.role === "SERVER" || node.data.role === "WORKSTATION")) {
-        edges.push(createLink(sw.id, node.id, '#3b82f6'));
-      }
-    });
-
-    return edges;
-  }, [nodes]);
-
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
   return (
     <div className="h-full w-full bg-[#FAF0E6] p-4 md:p-6 text-[#2F2F2F] flex flex-col">
@@ -230,35 +305,10 @@ export default function MapPage() {
               <Zap size={18} />
               {is_scanning ? 'Scan en cours...' : 'Lancer le scan'}
             </button>
+            {scanError && (
+              <p className="mt-4 text-sm text-red-400">{scanError}</p>
+            )}
           </div>
-
-    <div className="h-full w-full bg-[#020617] p-4 md:p-6 text-white flex flex-col relative overflow-hidden">
-      
-      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
-      
-      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
-        
-        {/* Zone de la carte */}
-        <div className="flex-1 min-h-[50vh] lg:min-h-0 rounded-xl overflow-hidden bg-[#0f172a] border border-slate-800 relative shadow-inner">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodeClick={onNodeClick}         // <--- Déclenche l'ouverture du panneau
-            onPaneClick={onPaneClick}         // <--- Déclenche la fermeture si clic dans le vide
-            onNodeMouseEnter={onNodeMouseEnter}
-            onNodeMouseLeave={onNodeMouseLeave}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            fitView
-            panOnScroll={window.innerWidth >= 1024}
-          >
-            <Background color="#334155" gap={30} size={1} />
-            <Controls className="bg-slate-800 border-slate-700 fill-white" />
-          </ReactFlow>
-          
-          {/* L'infobulle ne s'affiche que si rien n'est sélectionné */}
-          {hoveredNode && !selectedNode && <NodeDetailCard node={hoveredNode} />}
         </div>
       ) : (
         <div className="flex flex-col flex-1 gap-4">
@@ -275,6 +325,8 @@ export default function MapPage() {
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
+                onNodeClick={onNodeClick}
+                onPaneClick={onPaneClick}
                 onNodeMouseEnter={onNodeMouseEnter}
                 onNodeMouseLeave={onNodeMouseLeave}
                 onNodesChange={onNodesChange}
@@ -286,7 +338,9 @@ export default function MapPage() {
                 <Controls className="bg-[#FAF0E6] border-[#4A403A] fill-[#2F2F2F]" />
               </ReactFlow>
 
-              {hoveredNode && <NodeDetailCard node={hoveredNode} />}
+              {hoveredNode && !selectedNode && (
+                <NodeDetailCard node={hoveredNode} />
+              )}
             </div>
 
             <div className="w-full lg:w-52 p-4 bg-white rounded-xl border border-[#4A403A] h-fit shadow-lg">
@@ -366,24 +420,12 @@ export default function MapPage() {
             </div>
           </div>
         </div>
-        {/* Légende */}
-        <div className="w-full lg:w-52 p-4 bg-[#0f172a] rounded-xl border border-slate-800 h-fit shadow-lg">
-          <h3 className="font-bold mb-4 text-slate-200">Légende</h3>
-          <div className="grid grid-cols-2 gap-3 text-sm text-slate-400 lg:flex lg:flex-col">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"/> Server</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-500 shadow-[0_0_8px_rgba(100,116,139,0.6)]"/> Workstation</div>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* AJOUT 5 : Le panneau coulissant s'affiche ici si un nœud est sélectionné */}
       {selectedNode && (
-        <MachineDetailPanel 
-          node={selectedNode} 
-          onClose={() => setSelectedNode(null)} 
+        <MachineDetailPanel
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
         />
       )}
     </div>
