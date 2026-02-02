@@ -8,18 +8,24 @@ interface LoginPageProps {
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
-    // Simulation d'attente (pour l'effet UI)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const response = await fetch("/api/v1/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
     try {
       // Appel à l'API d'authentification
@@ -88,19 +94,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               placeholder="••••••••"
             />
           </div>
-          
+
           {error && (
             <div className="text-red-400 text-sm text-center bg-red-900/20 py-2 rounded border border-red-900/30">
               {error}
             </div>
           )}
-          
+
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full bg-[#1E40AF] hover:bg-[#1e3a8a] text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
           >
-            {isSubmitting ? 'Connexion...' : 'Se connecter'}
+            {isSubmitting ? "Connexion..." : "Se connecter"}
           </button>
         </form>
 

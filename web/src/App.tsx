@@ -3,12 +3,14 @@ import Layout from './Components/Layout';
 import { AppStoreProvider, useAppStore } from './contexts/AppStore';
 import HomePage from './Pages/HomePage';
 import PricingPage from './Pages/PricingPage';
+import MachineDetailPanel from './Components/MachineDetailPanel';
 import DashboardPage from './Pages/DashboardPage';
 import InventoryPage from './Pages/InventoryPage';
 import MapPage from './Pages/MapPage';
 import SettingsPage from './Pages/SettingsPage';
 import LoginPage from './Pages/LoginPage';
 import RegisterPage from './Pages/RegisterPage';
+import HostsPage from './Pages/HostsPage'; // <--- Import du login
 
 function AppContent() {
   const navigate = useNavigate();
@@ -65,9 +67,32 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
+
       <AppStoreProvider>
         <AppContent />
       </AppStoreProvider>
+{/*
+      <Routes>
+        {/* Si pas connecté, on montre uniquement le login et register }
+        {!isAuthenticated ? (
+          <>
+            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          Si connecté, on montre le Layout avec le Dashboard 
+          <Route element={<Layout onLogout={handleLogout} />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/hosts" element={<HostsPage />} />
+            <Route path="/hosts/:id" element={<MachineDetailPanel />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+        )}
+      </Routes>
+*/}
     </BrowserRouter>
   );
 }

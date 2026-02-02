@@ -4,7 +4,6 @@ import { LayoutDashboard, Network, Settings, Activity, LogOut, Menu, X } from 'l
 import { useAppStore } from '../contexts/AppStore';
 import DataOutdatedBanner from './DataOutdatedBanner';
 
-// Interface pour TypeScript
 interface LayoutProps {
   onLogout: () => void;
 }
@@ -12,10 +11,13 @@ interface LayoutProps {
 export default function Layout({ onLogout }: LayoutProps) {
   const { subscription_tier } = useAppStore();
   // État pour gérer l'ouverture/fermeture du menu sur mobile
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Fonction pour fermer le menu quand on clique sur un lien (UX fluide)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // NOUVEAU : On vérifie si l'utilisateur est ADMIN
+  const userRole = localStorage.getItem('userRole');
+  const isAdmin = userRole === 'ADMIN';
 
   return (
     <div className="flex h-screen bg-[#0F1117] text-[#E6EDF3] font-sans overflow-hidden">
@@ -28,7 +30,6 @@ export default function Layout({ onLogout }: LayoutProps) {
           <Activity size={20} className="text-[#3B82F6]" />
           <span className="font-bold text-lg">ClarIT</span>
         </div>
-        {/* Bouton Hamburger / Croix */}
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 text-[#8B949E] hover:text-[#E6EDF3] transition-colors"
@@ -37,12 +38,12 @@ export default function Layout({ onLogout }: LayoutProps) {
         </button>
       </div>
 
-      {/* --- 2. SIDEBAR RESPONSIVE --- */}
+      {/* --- SIDEBAR --- */}
       <aside className={`
         fixed inset-y-0 left-0 z-40 w-64 bg-[#161B22] border-r border-[#30363D] flex flex-col 
         transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} /* Mobile : caché/visible selon l'état */
-        md:translate-x-0 md:static /* PC : Toujours visible et statique */
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0 md:static
       `}>
         
         {/* Logo (Caché sur mobile car déjà dans le header du haut) */}
@@ -53,7 +54,6 @@ export default function Layout({ onLogout }: LayoutProps) {
           <span className="font-bold text-xl tracking-tight text-[#E6EDF3]">ClarIT</span>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 mt-16 md:mt-4">
           {/* Cartographie - Accessible à tous */}
           <NavLink 
@@ -111,7 +111,7 @@ export default function Layout({ onLogout }: LayoutProps) {
         </div>
       </aside>
 
-      {/* --- 3. OVERLAY (Fond noir quand le menu est ouvert sur mobile) --- */}
+      {/* --- OVERLAY MOBILE --- */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
