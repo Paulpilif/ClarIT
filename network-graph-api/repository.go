@@ -189,6 +189,9 @@ func GetGraph(ctx context.Context, driver neo4j.DriverWithContext) (models.Netwo
 				Hostname: getString(sourceProps, "hostname"),
 				Type:     getString(sourceProps, "type"),
 				Risk:     getString(sourceProps, "risk"),
+					Status:   getString(sourceProps, "status"),
+					CreatedAt: int64(getInt(sourceProps, "created_at")),
+					LastSeen: int64(getInt(sourceProps, "last_seen")),
 			}
 
 			servicesObj, _ := record.Get("services")
@@ -306,6 +309,9 @@ func GetGraphByCompany(ctx context.Context, driver neo4j.DriverWithContext, comp
 				Hostname: getString(sourceProps, "hostname"),
 				Type:     getString(sourceProps, "type"),
 				Risk:     getString(sourceProps, "risk"),
+					Status:   getString(sourceProps, "status"),
+					CreatedAt: int64(getInt(sourceProps, "created_at")),
+					LastSeen: int64(getInt(sourceProps, "last_seen")),
 			}
 
 			servicesObj, _ := record.Get("services")

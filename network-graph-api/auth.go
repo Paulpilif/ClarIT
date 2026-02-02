@@ -361,6 +361,26 @@ func healthHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+func premiumStatusHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiToken := c.GetHeader("X-API-Token")
+		if apiToken == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing_api_token"})
+			return
+		}
+
+		allowed, err := isPremiumToken(c.Request.Context(), db, apiToken)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database_error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"premium": allowed,
+		})
+	}
+}
+
 func getEnvOrDefault(key, fallback string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -421,7 +441,7 @@ func isPremiumToken(ctx context.Context, db *sql.DB, token string) (bool, error)
 	}
 
 	if !lastPaymentDate.Valid || !subscriptionType.Valid {
-		return false, nil
+		return true, nil
 	}
 
 	now := time.Now().UTC()

@@ -1,24 +1,25 @@
-import { useState, useMemo, useEffect } from "react";
-import ReactFlow, { 
-  Background, 
-  useNodesState, 
-  useEdgesState, 
-  type Node, 
-  type Edge, 
-  Controls
+import { useState, useEffect } from "react";
+import ReactFlow, {
+  Background,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+  Controls,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
+import MachineDetailPanel from "../Components/MachineDetailPanel";
+import type { HostData } from "../mock/hosts";
 import { Zap, CheckCircle, RotateCcw, X } from "lucide-react";
 import { useAppStore } from "../contexts/AppStore";
 
 const nodeTypes = { infra: InfraNode };
 
-const DEFAULT_CIDR = "10.211.55.0/24";
-const SCANNER_BASE_URL =
-  import.meta.env.VITE_SCANNER_BASE_URL || "http://localhost:8090";
 const GRAPH_JSON_URL = import.meta.env.VITE_GRAPH_JSON_URL || "";
+const GRAPH_API_BASE_URL =
+  import.meta.env.VITE_GRAPH_API_URL || "http://localhost:8080/api/v1";
 
 type SketchRole =
   | "SECURITY_GATEWAY"
@@ -61,6 +62,8 @@ type NetworkGraph = {
   nodes: GraphNode[];
   links: GraphLink[];
 };
+
+type InfraNodeData = HostData & { role: SketchRole };
 
 function getRole(host: GraphNode): SketchRole {
   const type = host.type?.toLowerCase();
@@ -164,17 +167,22 @@ export default function MapPage() {
     set_scan_target_prompt_requested,
     launch_scan,
     is_scanning,
+    subscription_tier,
+    is_subscription_loading,
   } = useAppStore();
-  
+
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showIPModal, setShowIPModal] = useState(false);
-  const [scanIP, setScanIP] = useState('');
-  const [ipError, setIpError] = useState('');
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  
+  const [scanIP, setScanIP] = useState("");
+  const [ipError, setIpError] = useState("");
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState<InfraNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [premiumGraphAvailable, setPremiumGraphAvailable] = useState(false);
+
   // AJOUT 2 : État pour gérer le clic (Sélection) vs le survol (Hover)
-  const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [hoveredNode, setHoveredNode] = useState<any>(null);
+  const [selectedNode, setSelectedNode] = useState<InfraNodeData | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<InfraNodeData | null>(null);
   const shouldShowIPModal = showIPModal || scan_target_prompt_requested;
 
   // Effet pour masquer le message après 3 secondes
@@ -187,80 +195,172 @@ export default function MapPage() {
     }
   }, [showSuccessMessage]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const sanitizeCidr = (cidr: string) => cidr.replace(/\//g, "_");
+
+    const resolveGraphUrl = () => {
+      if (GRAPH_JSON_URL) return GRAPH_JSON_URL;
+      const companyName = localStorage.getItem("currentUser");
+      const cidr = last_scan_target?.trim();
+
+      if (subscription_tier === "navigateur" && companyName) {
+        return `${GRAPH_API_BASE_URL}/graph/company/${encodeURIComponent(companyName)}`;
+      }
+
+      if (companyName && cidr) {
+        const safeCidr = sanitizeCidr(cidr);
+        return `/shared/${encodeURIComponent(companyName)}/scan_${encodeURIComponent(safeCidr)}.json`;
+      }
+
+      if (companyName) {
+        return `${GRAPH_API_BASE_URL}/graph/company/${encodeURIComponent(companyName)}`;
+      }
+
+      return `${GRAPH_API_BASE_URL}/graph`;
+    };
+
+    const loadGraph = async () => {
+      if (scan_data_status !== "valid" && subscription_tier !== "navigateur") {
+        setNodes([]);
+        setEdges([]);
+        setScanError(null);
+        setPremiumGraphAvailable(false);
+        return;
+      }
+
+      try {
+        setScanError(null);
+        const response = await fetch(resolveGraphUrl());
+        if (!response.ok) {
+          throw new Error(`Graph fetch failed: ${response.status}`);
+        }
+        const graphData = (await response.json()) as NetworkGraph;
+        const flowData = mapGraphToFlow(graphData);
+        if (cancelled) return;
+        setNodes(flowData.nodes as Node<InfraNodeData>[]);
+        setEdges(flowData.edges);
+        setPremiumGraphAvailable(graphData.nodes.length > 0);
+      } catch (error) {
+        console.error("Graph load error:", error);
+        if (!cancelled) {
+          setScanError(
+            "Impossible de charger la cartographie. Vérifiez que l'API est démarrée.",
+          );
+          setPremiumGraphAvailable(false);
+        }
+      }
+    };
+
+    loadGraph();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    scan_data_status,
+    last_scan_target,
+    showSuccessMessage,
+    subscription_tier,
+    setEdges,
+    setNodes,
+  ]);
+
   const handleStartScan = () => {
     setShowIPModal(true);
-    setScanIP(last_scan_target ?? '');
-    setIpError('');
+    setScanIP(last_scan_target ?? "");
+    setIpError("");
     set_scan_target_prompt_requested(false);
   };
 
   const validateIP = (ip: string): boolean => {
-    const ipRegex = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
-    return ipRegex.test(ip);
+    const ipv4 =
+      /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+    const ipv6 = /^(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+    const cidr = /\/(?:[0-9]|[1-2]\d|3[0-2])$/;
+    const [address, mask] = ip.split("/");
+    if (!address) return false;
+    const isValidAddress = ipv4.test(address) || ipv6.test(address);
+    if (!isValidAddress) return false;
+    if (mask === undefined) return true;
+    return cidr.test(`/${mask}`);
   };
 
   const handleConfirmScan = async () => {
-    const target = scanIP.trim() || last_scan_target?.trim() || '';
+    const target = scanIP.trim() || last_scan_target?.trim() || "";
 
     if (!target) {
-      setIpError('Veuillez entrer une adresse IP');
+      setIpError("Veuillez entrer une adresse IP");
       return;
     }
 
     if (!validateIP(target)) {
-      setIpError('Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6');
+      setIpError(
+        "Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6",
+      );
       return;
     }
 
-    setIpError('');
+    setIpError("");
     setShowIPModal(false);
     set_scan_target_prompt_requested(false);
 
     const result = await launch_scan(target);
-    if (result === 'success') {
+    if (result === "success") {
       setShowSuccessMessage(true);
+    } else if (result === "error") {
+      setScanError(
+        "Impossible de lancer le scan. Vérifiez que le service est démarré sur :8090.",
+      );
     }
   };
 
   const handleCancelScan = () => {
     setShowIPModal(false);
-    setScanIP('');
-    setIpError('');
+    setScanIP("");
+    setIpError("");
     set_scan_target_prompt_requested(false);
   };
 
   const handleRestartScan = () => {
     setShowIPModal(true);
-    setScanIP(last_scan_target ?? '');
-    setIpError('');
+    setScanIP(last_scan_target ?? "");
+    setIpError("");
     set_scan_target_prompt_requested(false);
   };
 
   const handleConfirmRestartScan = async () => {
-    const target = scanIP.trim() || last_scan_target?.trim() || '';
+    const target = scanIP.trim() || last_scan_target?.trim() || "";
 
     if (!target) {
-      setIpError('Veuillez entrer une adresse IP');
+      setIpError("Veuillez entrer une adresse IP");
       return;
     }
 
     if (!validateIP(target)) {
-      setIpError('Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6');
+      setIpError(
+        "Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6",
+      );
       return;
     }
 
-    setIpError('');
+    setIpError("");
     setShowIPModal(false);
     setShowSuccessMessage(false);
     set_scan_target_prompt_requested(false);
 
     const result = await launch_scan(target);
-    if (result === 'success') {
+    if (result === "success") {
       setShowSuccessMessage(true);
+    } else if (result === "error") {
+      setScanError(
+        "Impossible de lancer le scan. Vérifiez que le service est démarré sur :8090.",
+      );
     }
   };
   // AJOUT 3 : Gestionnaire de clic sur un nœud
-  const onNodeClick = (_: React.MouseEvent, node: Node) => {
+  const onNodeClick = (_: React.MouseEvent, node: Node<InfraNodeData>) => {
     setSelectedNode(node.data); // Ouvre le panneau
     setHoveredNode(null); // Cache l'infobulle pour ne pas gêner
   };
@@ -270,7 +370,7 @@ export default function MapPage() {
     setSelectedNode(null);
   };
 
-  const onNodeMouseEnter = (_: React.MouseEvent, node: Node) => {
+  const onNodeMouseEnter = (_: React.MouseEvent, node: Node<InfraNodeData>) => {
     // On affiche l'infobulle seulement si le panneau n'est pas ouvert
     if (!selectedNode) {
       setHoveredNode(node.data);
@@ -281,11 +381,24 @@ export default function MapPage() {
     setHoveredNode(null);
   };
 
+  const canShowGraph = scan_data_status === "valid" || premiumGraphAvailable;
+  const shouldShowScanPrompt = !canShowGraph && !is_subscription_loading;
+  const shouldShowAccessLoading =
+    is_subscription_loading && scan_data_status !== "valid";
+
   return (
     <div className="h-full w-full bg-[#FAF0E6] p-4 md:p-6 text-[#2F2F2F] flex flex-col">
-      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
+      <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+        Architecture Réseau
+      </h1>
 
-  {scan_data_status !== 'valid' ? (
+      {shouldShowAccessLoading ? (
+        <div className="flex items-center justify-center flex-1">
+          <div className="bg-white p-8 md:p-12 rounded-xl border border-[#4A403A] text-center max-w-md shadow-lg text-[#6B6B6B]">
+            Vérification de votre accès premium...
+          </div>
+        </div>
+      ) : shouldShowScanPrompt ? (
         <div className="flex items-center justify-center flex-1">
           <div className="bg-white p-8 md:p-12 rounded-xl border border-[#4A403A] text-center max-w-md shadow-lg">
             <div className="mb-6">
@@ -293,9 +406,12 @@ export default function MapPage() {
                 <Zap className="w-8 h-8 text-blue-600" />
               </div>
             </div>
-            <h2 className="text-xl font-bold mb-3 text-[#2F2F2F]">Lancer un scan réseau</h2>
+            <h2 className="text-xl font-bold mb-3 text-[#2F2F2F]">
+              Lancer un scan réseau
+            </h2>
             <p className="text-[#6B6B6B] text-sm mb-6">
-              Analysez votre infrastructure pour visualiser la cartographie complète de votre réseau.
+              Analysez votre infrastructure pour visualiser la cartographie
+              complète de votre réseau.
             </p>
             <button
               onClick={handleStartScan}
@@ -303,7 +419,7 @@ export default function MapPage() {
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2"
             >
               <Zap size={18} />
-              {is_scanning ? 'Scan en cours...' : 'Lancer le scan'}
+              {is_scanning ? "Scan en cours..." : "Lancer le scan"}
             </button>
             {scanError && (
               <p className="mt-4 text-sm text-red-400">{scanError}</p>
@@ -347,11 +463,26 @@ export default function MapPage() {
               <h3 className="font-bold mb-4 text-[#2F2F2F]">Légende</h3>
 
               <div className="grid grid-cols-2 gap-3 text-sm text-[#6B6B6B] lg:flex lg:flex-col mb-6">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"/> Gateway</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"/> Router</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"/> Switch</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"/> Server</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#8B7355] shadow-[0_0_8px_rgba(139,115,85,0.6)]"/> Workstation</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />{" "}
+                  Gateway
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />{" "}
+                  Router
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />{" "}
+                  Switch
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />{" "}
+                  Server
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#8B7355] shadow-[0_0_8px_rgba(139,115,85,0.6)]" />{" "}
+                  Workstation
+                </div>
               </div>
 
               <button
@@ -360,7 +491,7 @@ export default function MapPage() {
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-500 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <RotateCcw size={16} />
-                {is_scanning ? 'Scan en cours...' : 'Relancer un scan'}
+                {is_scanning ? "Scan en cours..." : "Relancer un scan"}
               </button>
             </div>
           </div>
@@ -372,7 +503,9 @@ export default function MapPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-[#2F2F2F]">Adresse IP du réseau</h2>
+              <h2 className="text-xl font-bold text-[#2F2F2F]">
+                Adresse IP du réseau
+              </h2>
               <button
                 onClick={handleCancelScan}
                 className="text-[#6B6B6B] hover:text-[#2F2F2F]"
@@ -380,7 +513,7 @@ export default function MapPage() {
                 <X size={24} />
               </button>
             </div>
-            
+
             <p className="text-[#6B6B6B] text-sm mb-4">
               Entrez l'adresse IP du réseau que vous souhaitez scanner
             </p>
@@ -391,10 +524,10 @@ export default function MapPage() {
               </label>
               <input
                 type="text"
-                value={scanIP || last_scan_target || ''}
+                value={scanIP || last_scan_target || ""}
                 onChange={(e) => {
                   setScanIP(e.target.value);
-                  setIpError('');
+                  setIpError("");
                 }}
                 placeholder="ex: 192.168.1.0 ou 2001:db8::1"
                 className="w-full px-3 py-2 border border-[#D0CACA] rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-[#2F2F2F]"
@@ -412,7 +545,11 @@ export default function MapPage() {
                 Annuler
               </button>
               <button
-                onClick={scan_data_status === 'valid' ? handleConfirmRestartScan : handleConfirmScan}
+                onClick={
+                  scan_data_status === "valid"
+                    ? handleConfirmRestartScan
+                    : handleConfirmScan
+                }
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
                 Lancer le scan

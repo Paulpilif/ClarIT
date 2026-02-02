@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Shield, UserPlus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { Shield, UserPlus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -12,6 +12,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +21,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setError("");
 
     try {
-      const response = await fetch("/api/v1/login", {
+      // Appel à l'API d'authentification
+      const response = await fetch(`${apiBaseUrl}/api/v1/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -27,55 +30,61 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         body: JSON.stringify({ username, password }),
       });
 
-    try {
-      // Appel à l'API d'authentification
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      });
-
       if (!response.ok) {
         const data = await response.json();
-        setError(data.error || 'Erreur lors de la connexion');
+        setError(data.error || "Erreur lors de la connexion");
         setIsSubmitting(false);
         return;
       }
 
       const data = await response.json();
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('currentUser', data.user.username);
+      localStorage.setItem("auth_status", "true");
+      localStorage.setItem("api_token", data.apiToken);
+      localStorage.setItem("currentUser", data.companyName);
       onLogin();
-      navigate('/map');
+      navigate("/map");
     } catch (err) {
-      setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
+      setError(
+        `Erreur de connexion au serveur. Assurez-vous que le serveur d'authentification est démarré. ${err}`,
+      );
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     // Le style inline garantit que le fond prend tout l'écran, même sur mobile
-    <div style={{ 
-      display: 'flex', justifyContent: 'center', alignItems: 'center', 
-      height: '100vh', width: '100vw', backgroundColor: '#0F1117',
-      position: 'fixed', top: 0, left: 0, zIndex: 50
-    }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        width: "100vw",
+        backgroundColor: "#0F1117",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 50,
+      }}
+    >
       {/* w-full + max-w-md + m-4 : Assure que la carte ne touche pas les bords sur mobile */}
       <div className="w-full max-w-md bg-[#161B22] rounded-2xl shadow-2xl border border-[#30363D] p-8 m-4">
-        
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/20 rounded-full mb-4 ring-1 ring-blue-500/30">
             <Shield className="w-8 h-8 text-[#3B82F6]" />
           </div>
           <h1 className="text-2xl font-bold text-[#E6EDF3]">Accès ClarIT</h1>
-          <p className="text-[#8B949E] text-sm mt-2">Zone d'administration sécurisée</p>
+          <p className="text-[#8B949E] text-sm mt-2">
+            Zone d'administration sécurisée
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">Identifiant</label>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
+              Identifiant
+            </label>
             <input
               type="text"
               value={username}
@@ -85,7 +94,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">Mot de passe</label>
+            <label className="block text-sm font-medium text-[#E6EDF3] mb-1">
+              Mot de passe
+            </label>
             <input
               type="password"
               value={password}
@@ -111,9 +122,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         </form>
 
         <div className="mt-6 pt-6 border-t border-[#30363D]">
-          <p className="text-[#8B949E] text-sm text-center mb-4">Pas encore de compte ?</p>
+          <p className="text-[#8B949E] text-sm text-center mb-4">
+            Pas encore de compte ?
+          </p>
           <button
-            onClick={() => navigate('/register')}
+            onClick={() => navigate("/register")}
             className="w-full flex items-center justify-center gap-2 bg-[#21262D]/50 hover:bg-[#21262D] text-[#E6EDF3] font-medium py-3 rounded-lg transition-colors border border-[#30363D]"
           >
             <UserPlus size={18} />
