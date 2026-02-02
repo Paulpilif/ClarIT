@@ -115,8 +115,10 @@ export default function InventoryPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const toUtcStartOfDay = (d: Date) =>
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const diffTime = Math.abs(toUtcStartOfDay(now) - toUtcStartOfDay(date));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "Aujourd'hui";
     if (diffDays === 1) return "Hier";
