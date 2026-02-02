@@ -45,10 +45,10 @@ export default function DashboardPage() {
       
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
-          Tableau de Bord - L'Amiral
+          Tableau de Bord
         </h1>
         <p className="text-[#6E7681] text-lg">
-          Bienvenue dans votre vue d'ensemble de la flotte
+          Vue d'ensemble de votre flotte réseau
         </p>
       </header>
 
@@ -152,7 +152,7 @@ export default function DashboardPage() {
           À propos de ce tableau de bord
         </h3>
         <p className="text-[#6E7681] mb-3">
-          Le dashboard L'Amiral fournit une vue stratégique de votre flotte réseau:
+          Ce dashboard fournit une vue stratégique de votre flotte réseau:
         </p>
         <ul className="space-y-2 text-[#6E7681]">
           <li>• <strong>Nouveaux Horizons</strong>: Suivez les nouvelles machines ajoutées à votre infrastructure</li>

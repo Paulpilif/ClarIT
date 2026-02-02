@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
         <div className="mb-6">
           <label className="block text-sm font-semibold text-[#2F2F2F] mb-3">Sélectionner un tier pour tester :</label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <button
               onClick={() => setTier('scout')}
               className={`p-3 rounded-lg border-2 transition-all ${
@@ -61,22 +61,11 @@ export default function SettingsPage() {
               Le Navigateur
               <div className="text-xs mt-1 opacity-75">Navigator (Carte + Inventaire)</div>
             </button>
-            <button
-              onClick={() => setTier('admiral')}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                tier === 'admiral'
-                  ? 'border-blue-600 bg-blue-50 text-[#2F2F2F] font-semibold'
-                  : 'border-[#D0CACA] bg-white text-[#6B6B6B] hover:border-blue-400'
-              }`}
-            >
-              L'Amiral
-              <div className="text-xs mt-1 opacity-75">Admiral (Accès complet)</div>
-            </button>
           </div>
         </div>
 
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
-          <strong>Tier actuel :</strong> {tier === 'scout' ? 'L\'Éclaireur' : tier === 'navigator' ? 'Le Navigateur' : 'L\'Amiral'}
+          <strong>Tier actuel :</strong> {tier === 'scout' ? 'L\'Éclaireur' : 'Le Navigateur'}
         </div>
       </div>
     </div>

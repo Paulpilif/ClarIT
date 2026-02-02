@@ -64,7 +64,7 @@ export default function Layout({ onLogout }: LayoutProps) {
             <span>Cartographie</span>
           </NavLink>
 
-          {/* Inventaire - Accessible Navigateur & Amiral (seulement si scan complété) */}
+          {/* Inventaire - Accessible Navigateur uniquement (seulement si scan complété) */}
           {(hasAccess('inventory') && scanCompleted) && (
             <NavLink 
               to="/inventory" 

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Activity, Check, ArrowRight } from 'lucide-react';
 
-type TierType = 'scout' | 'navigator' | 'admiral';
+type TierType = 'scout' | 'navigator';
 
 export default function PricingPage() {
   const navigate = useNavigate();
@@ -37,42 +37,23 @@ export default function PricingPage() {
     {
       id: 'navigator',
       name: 'Le Navigateur',
-      title: 'Standard',
-      description: 'Pour les aventuriers ayant besoin de plus.',
+      title: 'Premium',
+      description: 'Pour les explorateurs avancés.',
       price: '99',
       period: '/mois',
       features: [
         'Tout de L\'Éclaireur',
-        'Accès à l\'Inventaire complet',
-        'Jusqu\'à 100 machines',
-        'Historique détaillé (6 mois)',
-        'Alertes et notifications',
-        'Rapports mensuels',
-        'Support prioritaire',
-      ],
-      highlighted: false,
-      cta: 'Essayer',
-    },
-    {
-      id: 'admiral',
-      name: 'L\'Amiral',
-      title: 'Premium',
-      description: 'Pour les maîtres de leur infrastructure.',
-      price: '299',
-      period: '/mois',
-      features: [
-        'Tout du Navigateur',
-        'Accès complet au Dashboard',
+        'Accès complet à l\'Inventaire',
+        'Tableau de bord après scan',
         'Machines illimitées',
-        'Historique complet (24 mois)',
-        'Analyse avancée et IA',
+        'Historique complet',
+        'Alertes et notifications',
         'Rapports personnalisés',
+        'Support prioritaire',
         'API d\'accès',
-        'Support 24/7 dédié',
-        'SLA garanti 99.9%',
       ],
       highlighted: true,
-      cta: 'Devenir Amiral',
+      cta: 'Essayer',
     },
   ];
 
@@ -136,7 +117,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {tiers.map((tier) => (
               <div
                 key={tier.id}

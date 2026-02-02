@@ -1,7 +1,7 @@
 import React, { createContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
-export type UserTier = 'scout' | 'navigator' | 'admiral';
+export type UserTier = 'scout' | 'navigator';
 
 interface UserContextType {
   tier: UserTier;
@@ -17,7 +17,7 @@ interface UserProviderProps {
 
 export function UserProvider({ children }: UserProviderProps) {
   // Mock: Change this to test different tiers
-  const [tier, setTier] = useState<UserTier>('admiral');
+  const [tier, setTier] = useState<UserTier>('navigator');
 
   const hasAccess = (feature: string, scanCompleted: boolean = false): boolean => {
     // Dashboard accessible à tous après un scan
@@ -32,11 +32,6 @@ export function UserProvider({ children }: UserProviderProps) {
       navigator: [
         'map', // Cartographie
         'inventory', // Inventaire
-      ],
-      admiral: [
-        'map', // Cartographie
-        'inventory', // Inventaire
-        'dashboard', // Dashboard
       ],
     };
 
