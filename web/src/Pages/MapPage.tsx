@@ -13,6 +13,7 @@ import InfraNode from "../Components/InfraNode";
 import NodeDetailCard from "../Components/NodeDetailsCard";
 import { Zap, CheckCircle, RotateCcw } from "lucide-react";
 import { useScan } from "../contexts/ScanContext";
+import { useUser } from "../contexts/UserContext";
 
 const nodeTypes = { infra: InfraNode };
 
@@ -54,8 +55,14 @@ const initialNodes: Node[] = mockHosts.map((h) => {
 
 export default function MapPage() {
   const { setScanCompleted } = useScan();
+  const { tier } = useUser();
+  
   const [scanStarted, setScanStarted] = useState(() => {
-    // Charger le scan depuis localStorage au démarrage
+    // Scout: jamais charger depuis localStorage (non persistant)
+    if (tier === 'scout') {
+      return false;
+    }
+    // Navigator: charger depuis localStorage (persistant)
     const saved = localStorage.getItem('scanCompleted');
     return saved === 'true';
   });
@@ -80,8 +87,6 @@ export default function MapPage() {
     setScanStarted(true);
     setShowSuccessMessage(true);
     setScanCompleted(true);
-    // Persister l'état du scan
-    localStorage.setItem('scanCompleted', 'true');
     setIsScanning(false);
   };
 
@@ -132,6 +137,13 @@ export default function MapPage() {
   return (
     <div className="h-full w-full bg-[#FAF0E6] p-4 md:p-6 text-[#2F2F2F] flex flex-col">
       <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Architecture Réseau</h1>
+      
+      {/* Message informatif pour Scout */}
+      {tier === 'scout' && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-900">
+          ℹ️ <strong>Tier Éclaireur :</strong> Votre scan n'est pas enregistré. Il sera réinitialisé à votre prochaine connexion.
+        </div>
+      )}
 
       {!scanStarted ? (
         <div className="flex items-center justify-center flex-1">
