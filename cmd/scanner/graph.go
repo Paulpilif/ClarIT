@@ -123,6 +123,10 @@ func ClassifyNode(n *Node) string {
 		return "network-device"
 	}
 
+	if MayBeWorkstation(n) {
+		return "workstation"
+	}
+	
 	if MayBeDomainController(n.Services) ||
 		(ports[389] && (ports[88] || ports[445])) {
 		return "domain-controller"
@@ -144,8 +148,8 @@ func ClassifyNode(n *Node) string {
 		return "bastion"
 	}
 
-	if MayBeWorkstation(n) {
-		return "workstation"
+	if MayBeRouter(n) {
+		return "router"
 	}
 
 	if len(n.Services) >= 3 {
