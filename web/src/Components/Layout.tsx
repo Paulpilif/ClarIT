@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, Network, Settings, Activity, LogOut, Menu, X } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
-import { useScan } from '../contexts/ScanContext';
+import { useAppStore } from '../contexts/AppStore';
+import DataOutdatedBanner from './DataOutdatedBanner';
 
 // Interface pour TypeScript
 interface LayoutProps {
@@ -10,8 +10,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ onLogout }: LayoutProps) {
-  const { hasAccess } = useUser();
-  const { scanCompleted } = useScan();
+  const { subscription_tier } = useAppStore();
   // État pour gérer l'ouverture/fermeture du menu sur mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -20,6 +19,8 @@ export default function Layout({ onLogout }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-[#0F1117] text-[#E6EDF3] font-sans overflow-hidden">
+      {/* Bandeau d'alerte pour données obsolètes */}
+      <DataOutdatedBanner />
       
       {/* --- 1. HEADER MOBILE (Visible uniquement sur mobile 'md:hidden') --- */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[#161B22] border-b border-[#30363D] flex items-center justify-between px-4 z-50">
@@ -65,7 +66,7 @@ export default function Layout({ onLogout }: LayoutProps) {
           </NavLink>
 
           {/* Inventaire - Accessible Navigateur uniquement (seulement si scan complété) */}
-          {(hasAccess('inventory') && scanCompleted) && (
+          {subscription_tier === 'navigateur' && (
             <NavLink 
               to="/inventory" 
               onClick={closeMobileMenu}
@@ -77,7 +78,7 @@ export default function Layout({ onLogout }: LayoutProps) {
           )}
 
           {/* Dashboard - Accessible à tous après un scan */}
-          {hasAccess('dashboard', scanCompleted) && (
+          {subscription_tier === 'navigateur' && (
             <NavLink 
               to="/dashboard" 
               onClick={closeMobileMenu}
@@ -120,6 +121,7 @@ export default function Layout({ onLogout }: LayoutProps) {
 
       {/* --- CONTENU PRINCIPAL --- */}
       {/* pt-16 sur mobile pour ne pas être caché par le header */}
+      {/* Ajouter padding-top si le banneau est visible */}
       <main className="flex-1 overflow-auto bg-[#0F1117] relative pt-16 md:pt-0">
         <Outlet />
       </main>

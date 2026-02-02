@@ -22,8 +22,8 @@ export default function PricingPage() {
       name: 'L\'Éclaireur',
       title: 'Free',
       description: 'Parfait pour débuter votre exploration réseau.',
-      price: '0',
-      period: 'Gratuit',
+      price: 'Gratuit',
+      period: '',
       features: [
         'Accès à la Cartographie réseau',
         'Vue en temps réel de votre infrastructure',
@@ -145,8 +145,10 @@ export default function PricingPage() {
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold text-black">{tier.price}€</span>
-                      <span className="text-gray-600">{tier.period}</span>
+                        <span className="text-5xl font-bold text-black">
+                          {tier.id === 'scout' ? tier.price : `${tier.price}€`}
+                        </span>
+                        {tier.period && <span className="text-gray-600">{tier.period}</span>}
                     </div>
                   </div>
 

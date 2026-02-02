@@ -1,9 +1,10 @@
 import { enrichedHosts } from '../mock/dashboard-data';
-import { useScan } from '../contexts/ScanContext';
-import { AlertCircle } from 'lucide-react';
+import { useAppStore } from '../contexts/AppStore';
+import DataSyncEmptyState from '../Components/DataSyncEmptyState';
+import PaywallUpgrade from '../Components/PaywallUpgrade';
 
 export default function InventoryPage() {
-  const { scanCompleted } = useScan();
+  const { subscription_tier, scan_data_status } = useAppStore();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -29,20 +30,16 @@ export default function InventoryPage() {
         </p>
       </header>
 
-      {!scanCompleted ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-8 max-w-md text-center">
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="text-amber-600" size={48} />
-            </div>
-            <h2 className="text-xl font-bold text-amber-900 mb-2">
-              Scan requis
-            </h2>
-            <p className="text-amber-800 text-sm">
-              Veuillez lancer un scan réseau depuis la Cartographie pour accéder à l'inventaire des machines.
-            </p>
-          </div>
-        </div>
+      {subscription_tier === 'eclaireur' ? (
+        <PaywallUpgrade
+          title="Inventaire réservé au plan Navigateur"
+          description="Passez au plan Navigateur pour accéder à l'inventaire détaillé."
+        />
+      ) : scan_data_status !== 'valid' ? (
+        <DataSyncEmptyState 
+          title="Données non synchronisées"
+          description="Veuillez lancer un scan pour accéder à l'inventaire des machines."
+        />
       ) : (
         <>
       {/* Inventory Table */}

@@ -42,6 +42,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('currentUser', data.user.username);
       onLogin();
+      navigate('/map');
     } catch (err) {
       setError('Erreur de connexion au serveur. Assurez-vous que le serveur d\'authentification est démarré.');
       setIsSubmitting(false);

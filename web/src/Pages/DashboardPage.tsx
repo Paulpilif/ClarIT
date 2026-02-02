@@ -1,9 +1,11 @@
-import { TrendingUp, AlertTriangle, Ship, AlertCircle } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Ship } from 'lucide-react';
 import { getNewHorizonCount, getGhostVesselsCount, getTotalFleetCount } from '../mock/dashboard-data';
-import { useScan } from '../contexts/ScanContext';
+import { useAppStore } from '../contexts/AppStore';
+import DataSyncEmptyState from '../Components/DataSyncEmptyState';
+import PaywallUpgrade from '../Components/PaywallUpgrade';
 
 export default function DashboardPage() {
-  const { scanCompleted } = useScan();
+  const { subscription_tier, scan_data_status } = useAppStore();
   
   const newHorizonData = getNewHorizonCount();
   const ghostVessels = getGhostVesselsCount();
@@ -11,7 +13,7 @@ export default function DashboardPage() {
 
   const trend = newHorizonData.current > newHorizonData.previous ? 'up' : newHorizonData.current < newHorizonData.previous ? 'down' : 'flat';
 
-  if (!scanCompleted) {
+  if (subscription_tier === 'eclaireur') {
     return (
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
         <header className="mb-8">
@@ -22,20 +24,30 @@ export default function DashboardPage() {
             Vue d'ensemble de votre flotte
           </p>
         </header>
+        <PaywallUpgrade
+          title="Tableau de Bord réservé au plan Navigateur"
+          description="Passez au plan Navigateur pour accéder aux indicateurs avancés."
+        />
+      </div>
+    );
+  }
 
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-8 max-w-md text-center">
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="text-amber-600" size={48} />
-            </div>
-            <h2 className="text-xl font-bold text-amber-900 mb-2">
-              Scan requis
-            </h2>
-            <p className="text-amber-800 text-sm">
-              Veuillez lancer un scan réseau depuis la Cartographie pour accéder au tableau de bord.
-            </p>
-          </div>
-        </div>
+  // Si données non synchronisées, afficher l'empty state
+  if (scan_data_status !== 'valid') {
+    return (
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
+            Tableau de Bord
+          </h1>
+          <p className="text-[#6E7681] text-lg">
+            Vue d'ensemble de votre flotte
+          </p>
+        </header>
+        <DataSyncEmptyState 
+          title="Données non synchronisées"
+          description="Veuillez lancer un scan pour accéder au tableau de bord."
+        />
       </div>
     );
   }
