@@ -14,6 +14,7 @@ type Node struct {
 	IP       string    `json:"ip"`
 	Hostname string    `json:"hostname"`
 	Type     string    `json:"type"`
+	OS       string    `json:"os,omitempty"`
 	Services []Service `json:"services,omitempty"`
 	Risk     string    `json:"risk,omitempty"`
 }
@@ -53,6 +54,7 @@ func BuildGraph(fps []*HostFingerprint) NetworkGraph {
 		ID:       scannerID,
 		IP:       scannerIP,
 		Hostname: scannerHostname,
+		OS: 	 "os",
 		Type:     "pc",
 		Risk:     "ok",
 	})
@@ -64,6 +66,7 @@ func BuildGraph(fps []*HostFingerprint) NetworkGraph {
 			ID:       id,
 			IP:       fp.IP,
 			Hostname: fp.Hostname,
+			OS:       fp.OS,
 			Type:     "server",
 			Services: fp.Services,
 			Risk:     "ok",
@@ -81,73 +84,65 @@ func BuildGraph(fps []*HostFingerprint) NetworkGraph {
 	return graph
 }
 
+func normalizeHostname(n *Node) {
+	h := strings.ToLower(n.Hostname)
+
+	if h == "_gateway" || h == "gateway" {
+		n.Hostname = "firewall"
+		n.Type = "firewall"
+	}
+}
+
+
 func EnrichGraph(g *NetworkGraph) {
 	for i := range g.Nodes {
 		n := &g.Nodes[i]
+
+		normalizeHostname(n)
+
+		if n.Type == "" || n.Type == "unknown" {
+			n.Type = ClassifyNode(n)
+		}
+
+		// Risk
 		risk := "ok"
 		for _, s := range n.Services {
 			if isVulnerable(s.Name, s.Version) {
 				risk = "vulnerable"
 				break
 			}
-			if isObsolete(s.Name, s.Version) && risk != "vulnerable" {
+			if isObsolete(s.Name, s.Version) {
 				risk = "obsolete"
 			}
 		}
 		n.Risk = risk
-
-		n.Type = ClassifyNode(n)
 	}
 }
 
 
+
 func ClassifyNode(n *Node) string {
-	ports := map[int]bool{}
-	services := map[string]bool{}
-
-	for _, s := range n.Services {
-		ports[s.Port] = true
-		services[strings.ToLower(s.Name)] = true
-	}
-
-	if ports[22] && ports[443] && len(n.Services) < 5 {
+	if n.Type == "firewall" {
 		return "firewall"
 	}
 
-	if services["vmware-auth"] || ports[902] || ports[903] {
-		return "hypervisor"
-	}
-
-	if ports[53] && (ports[67] || ports[68]) {
-		return "network-device"
-	}
-
-	if MayBeDomainController(n.Services) ||
-		(ports[389] && (ports[88] || ports[445])) {
+	if MayBeDomainController(n) {
 		return "domain-controller"
 	}
 
-	if ports[3306] || ports[5432] || ports[27017] {
-		return "database-server"
+	if MayBeRouter(n) {
+		return "router"
+	
 	}
-
-	if ports[80] || ports[443] {
+	if MayBeWebServer(n) {
 		return "web-server"
-	}
-
-	if ports[8080] || ports[8443] {
-		return "application-server"
-	}
-
-	if ports[22] && len(ports) <= 3 {
-		return "bastion"
 	}
 
 	if MayBeWorkstation(n) {
 		return "workstation"
 	}
 
-	if len(n.Services) >= 3 {
+	if len(n.Services) > 0 {
 		return "server"
 	}
 

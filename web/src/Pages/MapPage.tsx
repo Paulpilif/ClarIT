@@ -50,6 +50,7 @@ type GraphNode = {
   type: string;
   services?: GraphService[];
   risk?: string;
+  status?: string;
 };
 
 type GraphLink = {
@@ -122,8 +123,17 @@ function mapGraphToFlow(graph: NetworkGraph) {
     }));
 
     const risk = node.risk?.toLowerCase();
+    const statusValue = node.status?.toLowerCase();
     const status =
-      risk === "vulnerable" || risk === "obsolete" ? "warning" : "online";
+      statusValue === "missing"
+        ? "missing"
+        : statusValue === "offline" || statusValue === "down"
+          ? "offline"
+          : statusValue === "online" || statusValue === "up"
+            ? "online"
+            : risk === "vulnerable" || risk === "obsolete"
+              ? "warning"
+              : "online";
 
     const data = {
       id: node.id,

@@ -1,19 +1,113 @@
-import { TrendingUp, AlertTriangle, Ship } from 'lucide-react';
-import { getNewHorizonCount, getGhostVesselsCount, getTotalFleetCount } from '../mock/dashboard-data';
-import { useAppStore } from '../contexts/AppStore';
-import DataSyncEmptyState from '../Components/DataSyncEmptyState';
-import PaywallUpgrade from '../Components/PaywallUpgrade';
+import { useEffect, useMemo, useState } from "react";
+import { TrendingUp, AlertTriangle, Ship } from "lucide-react";
+import { useAppStore } from "../contexts/AppStore";
+import DataSyncEmptyState from "../Components/DataSyncEmptyState";
+import PaywallUpgrade from "../Components/PaywallUpgrade";
+
+const GRAPH_JSON_URL = import.meta.env.VITE_GRAPH_JSON_URL || "";
+const GRAPH_API_BASE_URL =
+  import.meta.env.VITE_GRAPH_API_URL || "http://localhost:8080/api/v1";
+
+type GraphNode = {
+  id: string;
+  created_at?: number;
+  last_seen?: number;
+};
+
+type NetworkGraph = {
+  nodes: GraphNode[];
+};
 
 export default function DashboardPage() {
   const { subscription_tier, scan_data_status } = useAppStore();
-  
-  const newHorizonData = getNewHorizonCount();
-  const ghostVessels = getGhostVesselsCount();
-  const totalFleet = getTotalFleetCount();
+  const [kpis, setKpis] = useState({
+    totalMachines: 0,
+    createdLast30Days: 0,
+    missingLast30Days: 0,
+  });
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const trend = newHorizonData.current > newHorizonData.previous ? 'up' : newHorizonData.current < newHorizonData.previous ? 'down' : 'flat';
+  const resolveGraphUrl = useMemo(() => {
+    if (GRAPH_JSON_URL) return GRAPH_JSON_URL;
+    const companyName = localStorage.getItem("currentUser");
+    if (companyName) {
+      return `${GRAPH_API_BASE_URL}/graph/company/${encodeURIComponent(companyName)}`;
+    }
+    return `${GRAPH_API_BASE_URL}/graph`;
+  }, []);
 
-  if (subscription_tier === 'eclaireur') {
+  useEffect(() => {
+    let cancelled = false;
+
+    const toMillis = (value?: number) => {
+      if (!value) return undefined;
+      return value > 1_000_000_000_000 ? value : value * 1000;
+    };
+
+    const loadGraph = async () => {
+      if (scan_data_status !== "valid") {
+        setKpis({
+          totalMachines: 0,
+          createdLast30Days: 0,
+          missingLast30Days: 0,
+        });
+        setLoadError(null);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const response = await fetch(resolveGraphUrl);
+        if (!response.ok) {
+          throw new Error(`Graph fetch failed: ${response.status}`);
+        }
+        const graphData = (await response.json()) as NetworkGraph;
+        const now = Date.now();
+        const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+        const totalMachines = graphData.nodes.length;
+        const createdLast30Days = graphData.nodes.filter((node) => {
+          const created = toMillis(node.created_at);
+          return created !== undefined && created >= thirtyDaysAgo;
+        }).length;
+        const missingLast30Days = graphData.nodes.filter((node) => {
+          const lastSeen =
+            toMillis(node.last_seen) ?? toMillis(node.created_at);
+          return lastSeen !== undefined && lastSeen < thirtyDaysAgo;
+        }).length;
+
+        if (!cancelled) {
+          setKpis({ totalMachines, createdLast30Days, missingLast30Days });
+        }
+      } catch (error) {
+        console.error("Dashboard load error:", error);
+        if (!cancelled) {
+          setLoadError(
+            "Impossible de charger le tableau de bord. Vérifiez que l'API est démarrée.",
+          );
+          setKpis({
+            totalMachines: 0,
+            createdLast30Days: 0,
+            missingLast30Days: 0,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadGraph();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveGraphUrl, scan_data_status]);
+
+  if (subscription_tier === "eclaireur") {
     return (
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
         <header className="mb-8">
@@ -33,7 +127,7 @@ export default function DashboardPage() {
   }
 
   // Si données non synchronisées, afficher l'empty state
-  if (scan_data_status !== 'valid') {
+  if (scan_data_status !== "valid") {
     return (
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
         <header className="mb-8">
@@ -44,7 +138,7 @@ export default function DashboardPage() {
             Vue d'ensemble de votre flotte
           </p>
         </header>
-        <DataSyncEmptyState 
+        <DataSyncEmptyState
           title="Données non synchronisées"
           description="Veuillez lancer un scan pour accéder au tableau de bord."
         />
@@ -54,7 +148,6 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-[#2F2F2F] mb-2">
           Tableau de Bord
@@ -63,6 +156,18 @@ export default function DashboardPage() {
           Vue d'ensemble de votre flotte réseau
         </p>
       </header>
+
+      {loadError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          {loadError}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mb-6 rounded-lg border border-[#2F2F2F]/10 bg-[#FAF0E6]/40 px-4 py-3 text-[#6E7681]">
+          Chargement du tableau de bord...
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -74,34 +179,20 @@ export default function DashboardPage() {
                 Nouveaux Horizons
               </p>
               <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
-                {newHorizonData.current}
+                {kpis.createdLast30Days}
               </h2>
               <p className="text-[#6E7681] text-sm mt-2">
-                VMs créées ce mois-ci
+                Machines créées sur 30 jours
               </p>
             </div>
             <div className="p-3 bg-[#2F2F2F] rounded-lg">
               <TrendingUp size={24} className="text-[#FAF0E6]" />
             </div>
           </div>
-
-          {/* Trend comparé au mois dernier */}
           <div className="pt-4 border-t border-[#2F2F2F]/20">
-            {trend === 'up' && (
-              <p className="text-green-700 text-sm font-medium">
-                ↑ {newHorizonData.current - newHorizonData.previous} de plus que le mois dernier
-              </p>
-            )}
-            {trend === 'down' && (
-              <p className="text-red-700 text-sm font-medium">
-                ↓ {newHorizonData.previous - newHorizonData.current} de moins que le mois dernier
-              </p>
-            )}
-            {trend === 'flat' && (
-              <p className="text-[#6E7681] text-sm font-medium">
-                Même nombre qu'en mois dernier
-              </p>
-            )}
+            <p className="text-[#6E7681] text-sm font-medium">
+              Basé sur l'inventaire réel
+            </p>
           </div>
         </div>
 
@@ -113,10 +204,10 @@ export default function DashboardPage() {
                 Vaisseaux Fantômes
               </p>
               <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
-                {ghostVessels}
+                {kpis.missingLast30Days}
               </h2>
               <p className="text-[#6E7681] text-sm mt-2">
-                Machines hors ligne (30j+)
+                Non vues depuis 30 jours
               </p>
             </div>
             <div className="p-3 bg-[#2F2F2F] rounded-lg">
@@ -139,11 +230,9 @@ export default function DashboardPage() {
                 Flotte Totale
               </p>
               <h2 className="text-4xl font-bold text-[#2F2F2F] mt-2">
-                {totalFleet}
+                {kpis.totalMachines}
               </h2>
-              <p className="text-[#6E7681] text-sm mt-2">
-                Machines actives en ligne
-              </p>
+              <p className="text-[#6E7681] text-sm mt-2">Machines détectées</p>
             </div>
             <div className="p-3 bg-[#2F2F2F] rounded-lg">
               <Ship size={24} className="text-[#FAF0E6]" />
@@ -167,11 +256,20 @@ export default function DashboardPage() {
           Ce dashboard fournit une vue stratégique de votre flotte réseau:
         </p>
         <ul className="space-y-2 text-[#6E7681]">
-          <li>• <strong>Nouveaux Horizons</strong>: Suivez les nouvelles machines ajoutées à votre infrastructure</li>
-          <li>• <strong>Vaisseaux Fantômes</strong>: Identifiez les machines qui n'ont pas été vues depuis plus d'un mois</li>
-          <li>• <strong>Flotte Totale</strong>: Vue instantanée du nombre total de machines actives</li>
+          <li>
+            • <strong>Nouveaux Horizons</strong>: Suivez les nouvelles machines
+            ajoutées à votre infrastructure
+          </li>
+          <li>
+            • <strong>Vaisseaux Fantômes</strong>: Identifiez les machines qui
+            n'ont pas été vues depuis plus d'un mois
+          </li>
+          <li>
+            • <strong>Flotte Totale</strong>: Vue instantanée du nombre total de
+            machines actives
+          </li>
         </ul>
       </div>
     </div>
-    );
+  );
 }
