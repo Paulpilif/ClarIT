@@ -106,6 +106,7 @@ export default function InventoryPage() {
     subscription_tier,
     scan_data_status,
     last_scan_target,
+    last_scan_graph,
     is_subscription_loading,
   } = useAppStore();
   const [inventoryHosts, setInventoryHosts] = useState<InventoryHost[]>([]);
@@ -131,6 +132,12 @@ export default function InventoryPage() {
     let cancelled = false;
 
     const sanitizeCidr = (cidr: string) => cidr.replace(/\//g, "_");
+    const hasMultipleTargets = (cidr?: string | null) =>
+      Boolean(
+        cidr &&
+        cidr.split(",").some((value) => value.trim()) &&
+        cidr.includes(","),
+      );
 
     const resolveGraphUrl = () => {
       if (GRAPH_JSON_URL) return GRAPH_JSON_URL;
@@ -158,6 +165,15 @@ export default function InventoryPage() {
         setInventoryHosts([]);
         setLoadError(null);
         setPremiumGraphAvailable(false);
+        return;
+      }
+
+      if (hasMultipleTargets(last_scan_target) && last_scan_graph) {
+        const mapped = mapGraphToInventory(last_scan_graph as NetworkGraph);
+        setInventoryHosts(mapped);
+        setLoadError(null);
+        setIsLoading(false);
+        setPremiumGraphAvailable(mapped.length > 0);
         return;
       }
 
@@ -195,7 +211,7 @@ export default function InventoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [scan_data_status, subscription_tier, last_scan_target]);
+  }, [scan_data_status, subscription_tier, last_scan_target, last_scan_graph]);
 
   const hasPremiumAccess = subscription_tier === "navigateur";
   const canShowInventory =

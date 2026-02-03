@@ -14,7 +14,7 @@ func main() {
 	companyFlag := flag.String("company", "", "Nom de l'entreprise (utilisé pour le dossier de résultats)")
 	serverFlag := flag.Bool("server", false, "Lancer le serveur HTTP")
 	listenFlag := flag.String("listen", ":8090", "Adresse d'écoute du serveur HTTP")
-	timeoutFlag := flag.Duration("timeout", 5*time.Minute, "Timeout du scan")
+	timeoutFlag := flag.Duration("timeout", 25*time.Minute, "Timeout du scan")
 	saveFlag := flag.Bool("save", true, "Sauvegarder le JSON dans un fichier (mode CLI)")
 	stdoutFlag := flag.Bool("stdout", false, "Afficher le graphe JSON sur stdout (mode CLI)")
 
