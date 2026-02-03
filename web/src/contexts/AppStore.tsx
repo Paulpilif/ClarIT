@@ -15,12 +15,30 @@ const GRAPH_API_BASE_URL =
 export type SubscriptionTier = "eclaireur" | "navigateur";
 export type ScanDataStatus = "none" | "valid" | "outdated";
 
+type StoredGraphNode = {
+  id: string;
+  [key: string]: unknown;
+};
+
+type StoredGraphLink = {
+  source: string;
+  target: string;
+  type?: string;
+  [key: string]: unknown;
+};
+
+export type StoredNetworkGraph = {
+  nodes: StoredGraphNode[];
+  links?: StoredGraphLink[];
+};
+
 interface AppStoreType {
   auth_status: boolean;
   subscription_tier: SubscriptionTier;
   is_subscription_loading: boolean;
   scan_data_status: ScanDataStatus;
   last_scan_target: string | null;
+  last_scan_graph: StoredNetworkGraph | null;
   is_scanning: boolean;
   scan_target_prompt_requested: boolean;
   login: () => void;
@@ -28,6 +46,7 @@ interface AppStoreType {
   set_subscription_tier: (tier: SubscriptionTier) => void;
   set_scan_data_status: (status: ScanDataStatus) => void;
   set_last_scan_target: (target: string | null) => void;
+  set_last_scan_graph: (graph: StoredNetworkGraph | null) => void;
   set_scan_target_prompt_requested: (value: boolean) => void;
   refresh_subscription_tier: () => Promise<void>;
   launch_scan: (
@@ -85,6 +104,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [last_scan_target, setLastScanTargetState] = useState<string | null>(
     getInitialScanTarget,
   );
+  const [last_scan_graph, setLastScanGraph] =
+    useState<StoredNetworkGraph | null>(null);
   const [is_scanning, setIsScanning] = useState(false);
   const [scan_target_prompt_requested, setScanTargetPromptRequested] =
     useState(false);
@@ -97,7 +118,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(() => {
     persistAuth(true);
-  }, [persistAuth]);
+  }, [persistAuth, setLastScanGraph]);
 
   const logout = useCallback(() => {
     persistAuth(false);
@@ -107,6 +128,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setSubscriptionTier("eclaireur");
     setScanDataStatus("none");
     setScanTargetPromptRequested(false);
+    setLastScanGraph(null);
   }, [persistAuth]);
 
   const set_subscription_tier = useCallback((tier: SubscriptionTier) => {
@@ -155,14 +177,48 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const set_last_scan_graph = useCallback(
+    (graph: StoredNetworkGraph | null) => {
+      setLastScanGraph(graph);
+    },
+    [],
+  );
+
   const set_scan_target_prompt_requested = useCallback((value: boolean) => {
     setScanTargetPromptRequested(value);
   }, []);
 
+  const parseTargets = (rawTarget?: string | null) =>
+    (rawTarget ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+  const mergeGraphs = (graphs: StoredNetworkGraph[]): StoredNetworkGraph => {
+    const nodeMap = new Map<string, StoredGraphNode>();
+    const links: StoredGraphLink[] = [];
+    const linkKeys = new Set<string>();
+
+    graphs.forEach((graph) => {
+      graph.nodes?.forEach((node) => {
+        const existing = nodeMap.get(node.id) ?? {};
+        nodeMap.set(node.id, { ...existing, ...node });
+      });
+      graph.links?.forEach((link) => {
+        const key = `${link.source}|${link.target}|${String(link.type ?? "")}`;
+        if (linkKeys.has(key)) return;
+        linkKeys.add(key);
+        links.push(link);
+      });
+    });
+
+    return { nodes: Array.from(nodeMap.values()), links };
+  };
+
   const launch_scan = useCallback(
     async (target?: string) => {
-      const resolvedTarget = (target ?? last_scan_target)?.trim();
-      if (!resolvedTarget) {
+      const resolvedTargets = parseTargets(target ?? last_scan_target);
+      if (resolvedTargets.length === 0) {
         setScanTargetPromptRequested(true);
         return "missing-target";
       }
@@ -171,27 +227,57 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         setIsScanning(true);
         const companyName = localStorage.getItem("currentUser") || undefined;
         const apiToken = localStorage.getItem("api_token") || undefined;
-        const response = await fetch("http://localhost:8090/scan", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        const isBatch = resolvedTargets.length > 1;
+        const response = await fetch(
+          isBatch
+            ? "http://localhost:8090/scan-batch"
+            : "http://localhost:8090/scan",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(
+              isBatch
+                ? {
+                    cidrs: resolvedTargets,
+                    save: true,
+                    company: companyName,
+                    api_token: apiToken,
+                  }
+                : {
+                    cidr: resolvedTargets[0],
+                    save: true,
+                    company: companyName,
+                    api_token: apiToken,
+                  },
+            ),
           },
-          body: JSON.stringify({
-            cidr: resolvedTarget,
-            save: true,
-            company: companyName,
-            api_token: apiToken,
-          }),
-        });
+        );
 
         if (!response.ok) {
           throw new Error("Scan failed");
         }
 
+        const responseJson = (await response.json()) as
+          | { graph?: StoredNetworkGraph }
+          | { items?: Array<{ graph?: StoredNetworkGraph; error?: string }> };
+
+        if (isBatch && "items" in responseJson) {
+          const graphs = (responseJson.items ?? [])
+            .map((item) => item.graph)
+            .filter(Boolean) as StoredNetworkGraph[];
+          set_last_scan_graph(graphs.length > 0 ? mergeGraphs(graphs) : null);
+        } else if (!isBatch && "graph" in responseJson) {
+          set_last_scan_graph(responseJson.graph ?? null);
+        } else {
+          set_last_scan_graph(null);
+        }
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         set_scan_data_status("valid");
-        set_last_scan_target(resolvedTarget);
+        set_last_scan_target(resolvedTargets.join(", "));
         return "success";
       } catch (error) {
         console.error("Scan error:", error);
@@ -200,7 +286,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         setIsScanning(false);
       }
     },
-    [last_scan_target, set_last_scan_target, set_scan_data_status],
+    [
+      last_scan_target,
+      set_last_scan_target,
+      set_last_scan_graph,
+      set_scan_data_status,
+    ],
   );
 
   const value = useMemo(
@@ -210,6 +301,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       is_subscription_loading,
       scan_data_status,
       last_scan_target,
+      last_scan_graph,
       is_scanning,
       scan_target_prompt_requested,
       login,
@@ -217,6 +309,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       set_subscription_tier,
       set_scan_data_status,
       set_last_scan_target,
+      set_last_scan_graph,
       set_scan_target_prompt_requested,
       refresh_subscription_tier,
       launch_scan,
@@ -227,6 +320,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       is_subscription_loading,
       scan_data_status,
       last_scan_target,
+      last_scan_graph,
       is_scanning,
       scan_target_prompt_requested,
       login,
@@ -234,6 +328,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       set_subscription_tier,
       set_scan_data_status,
       set_last_scan_target,
+      set_last_scan_graph,
       set_scan_target_prompt_requested,
       refresh_subscription_tier,
       launch_scan,

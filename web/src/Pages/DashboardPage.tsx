@@ -19,7 +19,12 @@ type NetworkGraph = {
 };
 
 export default function DashboardPage() {
-  const { subscription_tier, scan_data_status } = useAppStore();
+  const {
+    subscription_tier,
+    scan_data_status,
+    last_scan_target,
+    last_scan_graph,
+  } = useAppStore();
   const [kpis, setKpis] = useState({
     totalMachines: 0,
     createdLast30Days: 0,
@@ -59,11 +64,20 @@ export default function DashboardPage() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const response = await fetch(resolveGraphUrl);
-        if (!response.ok) {
-          throw new Error(`Graph fetch failed: ${response.status}`);
-        }
-        const graphData = (await response.json()) as NetworkGraph;
+        const hasMultipleTargets = Boolean(
+          last_scan_target && last_scan_target.includes(","),
+        );
+
+        const graphData =
+          hasMultipleTargets && last_scan_graph
+            ? (last_scan_graph as NetworkGraph)
+            : await (async () => {
+                const response = await fetch(resolveGraphUrl);
+                if (!response.ok) {
+                  throw new Error(`Graph fetch failed: ${response.status}`);
+                }
+                return (await response.json()) as NetworkGraph;
+              })();
         const now = Date.now();
         const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
@@ -105,7 +119,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [resolveGraphUrl, scan_data_status]);
+  }, [resolveGraphUrl, scan_data_status, last_scan_target, last_scan_graph]);
 
   if (subscription_tier === "eclaireur") {
     return (
