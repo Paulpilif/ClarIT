@@ -22,6 +22,7 @@ func PersistGraph(ctx context.Context, driver neo4j.DriverWithContext, graph mod
 				"ip":       n.IP,
 				"hostname": n.Hostname,
 				"type":     n.Type,
+				"os":       n.OS,
 				"risk":     n.Risk,
 			})
 		}
@@ -60,6 +61,7 @@ func PersistGraph(ctx context.Context, driver neo4j.DriverWithContext, graph mod
 			m.ip = item.ip, 
 			m.hostname = item.hostname, 
 			m.type = item.type,
+			m.os = item.os,
 			m.risk = item.risk,
 			m.company_name = $companyName,
 			m.last_seen = $now,   // <-- Le point clé
@@ -188,6 +190,7 @@ func GetGraph(ctx context.Context, driver neo4j.DriverWithContext) (models.Netwo
 				IP:       getString(sourceProps, "ip"),
 				Hostname: getString(sourceProps, "hostname"),
 				Type:     getString(sourceProps, "type"),
+				OS:       getString(sourceProps, "os"),
 				Risk:     getString(sourceProps, "risk"),
 					Status:   getString(sourceProps, "status"),
 					CreatedAt: int64(getInt(sourceProps, "created_at")),
@@ -308,6 +311,7 @@ func GetGraphByCompany(ctx context.Context, driver neo4j.DriverWithContext, comp
 				IP:       getString(sourceProps, "ip"),
 				Hostname: getString(sourceProps, "hostname"),
 				Type:     getString(sourceProps, "type"),
+				OS:       getString(sourceProps, "os"),
 				Risk:     getString(sourceProps, "risk"),
 					Status:   getString(sourceProps, "status"),
 					CreatedAt: int64(getInt(sourceProps, "created_at")),

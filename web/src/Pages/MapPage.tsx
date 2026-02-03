@@ -139,7 +139,7 @@ function mapGraphToFlow(graph: NetworkGraph) {
       id: node.id,
       ip: node.ip,
       hostname: node.hostname || node.ip,
-      os: node.type ? node.type.toUpperCase() : "N/A",
+      os: node.os ? node.os : "N/A",
       type: toHostType(node.type),
       status,
       uptime: "N/A",
@@ -179,6 +179,7 @@ export default function MapPage() {
     is_scanning,
     subscription_tier,
     is_subscription_loading,
+    last_scan_graph,
   } = useAppStore();
 
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -209,6 +210,12 @@ export default function MapPage() {
     let cancelled = false;
 
     const sanitizeCidr = (cidr: string) => cidr.replace(/\//g, "_");
+    const hasMultipleTargets = (cidr?: string | null) =>
+      Boolean(
+        cidr &&
+        cidr.split(",").some((value) => value.trim()) &&
+        cidr.includes(","),
+      );
 
     const resolveGraphUrl = () => {
       if (GRAPH_JSON_URL) return GRAPH_JSON_URL;
@@ -219,7 +226,7 @@ export default function MapPage() {
         return `${GRAPH_API_BASE_URL}/graph/company/${encodeURIComponent(companyName)}`;
       }
 
-      if (companyName && cidr) {
+      if (companyName && cidr && !hasMultipleTargets(cidr)) {
         const safeCidr = sanitizeCidr(cidr);
         return `/shared/${encodeURIComponent(companyName)}/scan_${encodeURIComponent(safeCidr)}.json`;
       }
@@ -237,6 +244,15 @@ export default function MapPage() {
         setEdges([]);
         setScanError(null);
         setPremiumGraphAvailable(false);
+        return;
+      }
+
+      if (hasMultipleTargets(last_scan_target) && last_scan_graph) {
+        setScanError(null);
+        const flowData = mapGraphToFlow(last_scan_graph as NetworkGraph);
+        setNodes(flowData.nodes as Node<InfraNodeData>[]);
+        setEdges(flowData.edges);
+        setPremiumGraphAvailable(flowData.nodes.length > 0);
         return;
       }
 
@@ -275,6 +291,7 @@ export default function MapPage() {
     subscription_tier,
     setEdges,
     setNodes,
+    last_scan_graph,
   ]);
 
   const handleStartScan = () => {
@@ -283,6 +300,12 @@ export default function MapPage() {
     setIpError("");
     set_scan_target_prompt_requested(false);
   };
+
+  const parseTargets = (raw: string) =>
+    raw
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
 
   const validateIP = (ip: string): boolean => {
     const ipv4 =
@@ -297,6 +320,12 @@ export default function MapPage() {
     return cidr.test(`/${mask}`);
   };
 
+  const validateTargets = (raw: string): boolean => {
+    const targets = parseTargets(raw);
+    if (targets.length === 0) return false;
+    return targets.every(validateIP);
+  };
+
   const handleConfirmScan = async () => {
     const target = scanIP.trim() || last_scan_target?.trim() || "";
 
@@ -305,9 +334,9 @@ export default function MapPage() {
       return;
     }
 
-    if (!validateIP(target)) {
+    if (!validateTargets(target)) {
       setIpError(
-        "Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6",
+        "Adresse IP invalide. Utilisez IPv4/IPv6 et séparez les adresses par des virgules.",
       );
       return;
     }
@@ -348,9 +377,9 @@ export default function MapPage() {
       return;
     }
 
-    if (!validateIP(target)) {
+    if (!validateTargets(target)) {
       setIpError(
-        "Adresse IP invalide. Utilisez IPv4 (ex: 192.168.1.0) ou IPv6",
+        "Adresse IP invalide. Utilisez IPv4/IPv6 et séparez les adresses par des virgules.",
       );
       return;
     }
@@ -525,7 +554,8 @@ export default function MapPage() {
             </div>
 
             <p className="text-[#6B6B6B] text-sm mb-4">
-              Entrez l'adresse IP du réseau que vous souhaitez scanner
+              Entrez l'adresse IP du réseau que vous souhaitez scanner. Vous
+              pouvez saisir plusieurs adresses séparées par des virgules.
             </p>
 
             <div className="mb-4">
@@ -539,7 +569,7 @@ export default function MapPage() {
                   setScanIP(e.target.value);
                   setIpError("");
                 }}
-                placeholder="ex: 192.168.1.0 ou 2001:db8::1"
+                placeholder="ex: 192.168.1.0, 10.0.0.0/24 ou 2001:db8::1"
                 className="w-full px-3 py-2 border border-[#D0CACA] rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-[#2F2F2F]"
               />
               {ipError && (

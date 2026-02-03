@@ -14,6 +14,7 @@ type Node struct {
 	IP       string    `json:"ip"`
 	Hostname string    `json:"hostname"`
 	Type     string    `json:"type"` // "router", "server", "pc"
+	OS       string    `json:"os,omitempty"`
 	Services []Service `json:"services,omitempty"`
 	Risk     string    `json:"risk,omitempty"`
 	Status   string    `json:"status,omitempty"`
