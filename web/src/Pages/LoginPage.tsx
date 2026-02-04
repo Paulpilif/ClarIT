@@ -121,7 +121,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-[#30363D]">
+        <div className="mt-6 pt-6 border-t border-[#30363D] space-y-4">
           <p className="text-[#8B949E] text-sm text-center mb-4">
             Pas encore de compte ?
           </p>
@@ -131,6 +131,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           >
             <UserPlus size={18} />
             <span>S'inscrire</span>
+          </button>
+
+          <button
+            onClick={() => navigate("/")}
+            className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-[#21262D] text-[#8B949E] hover:text-[#E6EDF3] font-medium py-3 rounded-lg transition-colors border border-[#30363D]"
+          >
+            <span>Revenir à l'accueil</span>
           </button>
         </div>
       </div>

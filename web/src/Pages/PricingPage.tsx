@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import { Activity, Check, ArrowRight } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { Activity, Check, ArrowRight } from "lucide-react";
 
-type TierType = 'scout' | 'navigator';
+type TierType = "scout" | "navigator";
 
 export default function PricingPage() {
   const navigate = useNavigate();
@@ -18,42 +18,42 @@ export default function PricingPage() {
     cta: string;
   }> = [
     {
-      id: 'scout',
-      name: 'L\'Éclaireur',
-      title: 'Free',
-      description: 'Parfait pour débuter votre exploration réseau.',
-      price: 'Gratuit',
-      period: '',
+      id: "scout",
+      name: "L'Éclaireur",
+      title: "Free",
+      description: "Parfait pour débuter votre exploration réseau.",
+      price: "Gratuit",
+      period: "",
       features: [
-        'Accès à la Cartographie réseau',
-        'Vue en temps réel de votre infrastructure',
-        'Jusqu\'à 20 machines',
-        'Support par email',
-        'Mise à jour automatique',
+        "Accès à la Cartographie réseau",
+        "Vue en temps réel de votre infrastructure",
+        "Jusqu'à 20 machines",
+        "Support par email",
+        "Mise à jour automatique",
       ],
       highlighted: false,
-      cta: 'Commencer',
+      cta: "Commencer",
     },
     {
-      id: 'navigator',
-      name: 'Le Navigateur',
-      title: 'Premium',
-      description: 'Pour les explorateurs avancés.',
-      price: '99',
-      period: '/mois',
+      id: "navigator",
+      name: "Le Navigateur",
+      title: "Premium",
+      description: "Pour les explorateurs avancés.",
+      price: "19,99",
+      period: "/mois",
       features: [
-        'Tout de L\'Éclaireur',
-        'Accès complet à l\'Inventaire',
-        'Tableau de bord après scan',
-        'Machines illimitées',
-        'Historique complet',
-        'Alertes et notifications',
-        'Rapports personnalisés',
-        'Support prioritaire',
-        'API d\'accès',
+        "Tout de L'Éclaireur",
+        "Accès complet à l'Inventaire",
+        "Tableau de bord après scan",
+        "Machines illimitées",
+        "Historique complet",
+        "Alertes et notifications",
+        "Rapports personnalisés",
+        "Support prioritaire",
+        "API d'accès",
       ],
       highlighted: true,
-      cta: 'Essayer',
+      cta: "Essayer",
     },
   ];
 
@@ -68,18 +68,29 @@ export default function PricingPage() {
               <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Activity size={20} className="text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight text-black">ClarIT</span>
+              <span className="font-bold text-xl tracking-tight text-black">
+                ClarIT
+              </span>
             </div>
 
             {/* Navigation Links */}
             <div className="flex items-center gap-8">
-              <a href="/" className="text-black hover:text-gray-600 font-medium transition-colors">
+              <a
+                href="/"
+                className="text-black hover:text-gray-600 font-medium transition-colors"
+              >
                 Accueil
               </a>
-              <a href="#" className="text-black hover:text-gray-600 font-medium transition-colors">
+              <a
+                href="#"
+                className="text-black hover:text-gray-600 font-medium transition-colors"
+              >
                 Entreprise
               </a>
-              <a href="/pricing" className="text-black hover:text-gray-600 font-medium transition-colors">
+              <a
+                href="/pricing"
+                className="text-black hover:text-gray-600 font-medium transition-colors"
+              >
                 Pricing
               </a>
             </div>
@@ -87,13 +98,13 @@ export default function PricingPage() {
             {/* Auth Buttons */}
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
                 className="px-6 py-2 text-black font-medium hover:text-gray-600 transition-colors"
               >
                 Inscription
               </button>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate("/login")}
                 className="px-6 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
               >
                 Connexion
@@ -112,7 +123,8 @@ export default function PricingPage() {
               Des tarifs pour chaque explorateur
             </h1>
             <p className="text-xl text-gray-600">
-              Choisissez le plan qui correspond à vos besoins et commencez votre voyage dès aujourd'hui.
+              Choisissez le plan qui correspond à vos besoins et commencez votre
+              voyage dès aujourd'hui.
             </p>
           </div>
 
@@ -123,8 +135,8 @@ export default function PricingPage() {
                 key={tier.id}
                 className={`relative rounded-2xl overflow-hidden transition-all ${
                   tier.highlighted
-                    ? 'bg-[#F5F5DC] border-2 border-black shadow-lg scale-105'
-                    : 'bg-white border-2 border-gray-200 hover:border-gray-400'
+                    ? "bg-[#F5F5DC] border-2 border-black shadow-lg scale-105"
+                    : "bg-white border-2 border-gray-200 hover:border-gray-400"
                 }`}
               >
                 {/* Highlighted Badge */}
@@ -138,27 +150,31 @@ export default function PricingPage() {
                 <div className="p-8">
                   {/* Header */}
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-2">{tier.name}</h3>
+                    <h3 className="text-2xl font-bold text-black mb-2">
+                      {tier.name}
+                    </h3>
                     <p className="text-gray-600 text-sm">{tier.description}</p>
                   </div>
 
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-bold text-black">
-                          {tier.id === 'scout' ? tier.price : `${tier.price}€`}
-                        </span>
-                        {tier.period && <span className="text-gray-600">{tier.period}</span>}
+                      <span className="text-5xl font-bold text-black">
+                        {tier.id === "scout" ? tier.price : `${tier.price}€`}
+                      </span>
+                      {tier.period && (
+                        <span className="text-gray-600">{tier.period}</span>
+                      )}
                     </div>
                   </div>
 
                   {/* CTA Button */}
                   <button
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate("/login")}
                     className={`w-full mb-8 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                       tier.highlighted
-                        ? 'bg-black text-white hover:bg-gray-800'
-                        : 'border-2 border-black text-black hover:bg-gray-50'
+                        ? "bg-black text-white hover:bg-gray-800"
+                        : "border-2 border-black text-black hover:bg-gray-50"
                     }`}
                   >
                     {tier.cta} <ArrowRight size={18} />
@@ -172,7 +188,10 @@ export default function PricingPage() {
                     <ul className="space-y-3">
                       {tier.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-3">
-                          <Check size={20} className="text-black flex-shrink-0 mt-0.5" />
+                          <Check
+                            size={20}
+                            className="text-black flex-shrink-0 mt-0.5"
+                          />
                           <span className="text-gray-700">{feature}</span>
                         </li>
                       ))}
@@ -197,7 +216,9 @@ export default function PricingPage() {
                   Puis-je changer de plan plus tard ?
                 </h3>
                 <p className="text-gray-600">
-                  Oui, vous pouvez changer de plan à tout moment. Les changements prendront effet à votre prochain cycle de facturation.
+                  Oui, vous pouvez changer de plan à tout moment. Les
+                  changements prendront effet à votre prochain cycle de
+                  facturation.
                 </p>
               </div>
 
@@ -206,7 +227,8 @@ export default function PricingPage() {
                   Y a-t-il une période d'essai gratuite ?
                 </h3>
                 <p className="text-gray-600">
-                  Oui, tous les plans payants incluent 14 jours d'essai gratuit. Pas de carte de crédit requise pour commencer.
+                  Oui, tous les plans payants incluent 14 jours d'essai gratuit.
+                  Pas de carte de crédit requise pour commencer.
                 </p>
               </div>
 
@@ -215,7 +237,9 @@ export default function PricingPage() {
                   Que se passe-t-il si j'annule mon abonnement ?
                 </h3>
                 <p className="text-gray-600">
-                  Vous conserverez l'accès jusqu'à la fin de votre période de facturation. Vous pourrez réactiver votre compte à tout moment.
+                  Vous conserverez l'accès jusqu'à la fin de votre période de
+                  facturation. Vous pourrez réactiver votre compte à tout
+                  moment.
                 </p>
               </div>
 
@@ -224,7 +248,8 @@ export default function PricingPage() {
                   Avez-vous des offres pour les entreprises ?
                 </h3>
                 <p className="text-gray-600">
-                  Oui, nous proposons des plans d'entreprise personnalisés. Contactez notre équipe pour en savoir plus.
+                  Oui, nous proposons des plans d'entreprise personnalisés.
+                  Contactez notre équipe pour en savoir plus.
                 </p>
               </div>
             </div>
@@ -238,10 +263,11 @@ export default function PricingPage() {
               Prêt à explorer votre infrastructure ?
             </h2>
             <p className="text-xl text-gray-300 mb-8">
-              Commencez avec L'Éclaireur gratuitement et passez à un plan supérieur quand vous serez prêt.
+              Commencez avec L'Éclaireur gratuitement et passez à un plan
+              supérieur quand vous serez prêt.
             </p>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
               className="px-8 py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center gap-2"
             >
               Commencer maintenant <ArrowRight size={20} />
@@ -257,7 +283,9 @@ export default function PricingPage() {
                 <Activity size={20} />
                 <span className="font-bold">ClarIT</span>
               </div>
-              <p className="text-gray-400">© 2026 ClarIT. Tous droits réservés.</p>
+              <p className="text-gray-400">
+                © 2026 ClarIT. Tous droits réservés.
+              </p>
             </div>
           </div>
         </footer>

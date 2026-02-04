@@ -10,7 +10,7 @@ export default function SettingsPage() {
   // État du profil
   const [profileData, setProfileData] = useState({
     username: currentUser || "",
-    email: "user@example.com",
+    email: "acme@mail.com",
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -18,7 +18,7 @@ export default function SettingsPage() {
 
   // État de l'abonnement
   const [subscriptionData, setSubscriptionData] = useState({
-    billingEmail: "user@example.com",
+    billingEmail: "acme@mail.com",
     billingName: currentUser || "",
   });
 
